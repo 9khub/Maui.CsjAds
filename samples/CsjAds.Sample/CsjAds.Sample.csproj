@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <RootNamespace>CsjAds.Sample</RootNamespace>
+
+    <ApplicationTitle>CSJ Ads Demo</ApplicationTitle>
+    <ApplicationId>com.csjads.sample</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CsjAds\CsjAds.csproj" />
+  </ItemGroup>
+
+</Project>

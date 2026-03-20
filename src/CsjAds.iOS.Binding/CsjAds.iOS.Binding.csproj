@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-ios</TargetFramework>
+    <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    <IsBindingProject>true</IsBindingProject>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>CsjAds.iOS.Binding</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Suppress common binding warnings -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS0108;CS0114</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ObjcBindingApiDefinition Include="ApiDefinition.cs" />
+    <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
+  </ItemGroup>
+
+  <!--
+    Native wrapper XCFramework built from the Xcode project.
+    Place the built .xcframework in the root of this project.
+    See native/ios/README.md for build instructions.
+
+    <NativeReference Include="CsjAdsWrapper.xcframework">
+      <Kind>Framework</Kind>
+      <SmartLink>true</SmartLink>
+      <ForceLoad>true</ForceLoad>
+    </NativeReference>
+  -->
+
+</Project>

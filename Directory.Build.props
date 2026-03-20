@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Authors>9khub</Authors>
+    <Company>9khub</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/9khub/Maui.CsjAds</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/9khub/Maui.CsjAds</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>maui;csj;pangle;ads;bytedance;穿山甲;dotnet;xamarin;android;ios</PackageTags>
+    <Description>Cross-platform .NET MAUI binding library for CSJ (穿山甲/Pangle) Ads SDK</Description>
+    <Copyright>Copyright © 9khub 2026</Copyright>
+  </PropertyGroup>
+</Project>

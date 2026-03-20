@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>CsjAds.Android.Binding</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Suppress common binding warnings -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS0108;CS0114;CS0672;BG8A00;BG8401</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Native wrapper AAR built from the Gradle project.
+    Place the built AAR in the Jars/ folder with Build Action = AndroidLibrary.
+    See native/android/README.md for build instructions.
+  -->
+  <ItemGroup>
+    <None Include="Jars\**" />
+  </ItemGroup>
+
+  <!--
+    Alternatively, if using AndroidGradleProject (requires local Android SDK + Gradle):
+    <AndroidGradleProject Include="../../native/android/build.gradle.kts">
+      <ModuleName>csjadswrapper</ModuleName>
+    </AndroidGradleProject>
+  -->
+
+</Project>

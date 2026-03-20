@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CsjAds.Sample.Pages.MainPage"
+             Title="CSJ Ads Demo">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="24">
+
+            <Label Text="CSJ (穿山甲) Ads SDK Demo"
+                   FontSize="24" FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Label x:Name="StatusLabel"
+                   Text="SDK Status: Not initialized"
+                   FontSize="14" TextColor="Gray"
+                   HorizontalOptions="Center" />
+
+            <Button Text="Initialize SDK"
+                    Clicked="OnInitializeSdk"
+                    BackgroundColor="#4A90D9" TextColor="White" />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <Label Text="Ad Formats" FontSize="18" FontAttributes="Bold" />
+
+            <Button Text="Rewarded Video"
+                    Clicked="OnRewardedVideo"
+                    BackgroundColor="#5C6BC0" TextColor="White" />
+
+            <Button Text="Interstitial (Full-Screen)"
+                    Clicked="OnInterstitial"
+                    BackgroundColor="#7E57C2" TextColor="White" />
+
+            <Button Text="Banner Ad"
+                    Clicked="OnBanner"
+                    BackgroundColor="#26A69A" TextColor="White" />
+
+            <Button Text="Splash Ad"
+                    Clicked="OnSplash"
+                    BackgroundColor="#EF5350" TextColor="White" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

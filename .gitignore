@@ -1,0 +1,40 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+.vs/
+*.DotSettings.user
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+
+## IDE
+.idea/
+*.iml
+.vscode/
+
+## macOS
+.DS_Store
+Thumbs.db
+
+## Android
+native/android/.gradle/
+native/android/build/
+native/android/csjadswrapper/build/
+native/android/local.properties
+native/android/.idea/
+
+## iOS
+native/ios/CsjAdsWrapper/Pods/
+native/ios/CsjAdsWrapper/Podfile.lock
+native/ios/CsjAdsWrapper/*.xcworkspace/
+native/ios/CsjAdsWrapper/build/
+native/ios/CsjAdsWrapper/DerivedData/
+
+## Build outputs
+artifacts/

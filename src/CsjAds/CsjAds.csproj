@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net8.0-android;net8.0-ios</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <IsPackable>true</IsPackable>
+    <PackageId>CsjAds.Maui</PackageId>
+    <RootNamespace>CsjAds</RootNamespace>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Suppress MAUI warnings for library project -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
+  </ItemGroup>
+
+  <!-- Android binding reference -->
+  <ItemGroup Condition="$(TargetFramework.Contains('android'))">
+    <ProjectReference Include="..\CsjAds.Android.Binding\CsjAds.Android.Binding.csproj" />
+  </ItemGroup>
+
+  <!-- iOS binding reference -->
+  <ItemGroup Condition="$(TargetFramework.Contains('ios'))">
+    <ProjectReference Include="..\CsjAds.iOS.Binding\CsjAds.iOS.Binding.csproj" />
+  </ItemGroup>
+
+</Project>

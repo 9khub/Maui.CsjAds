@@ -1,0 +1,13 @@
+<metadata>
+  <!--
+    Transforms for the CsjAdsWrapper AAR binding.
+    The wrapper exposes a minimal API surface, so few transforms should be needed.
+    Add entries here if the binding generator produces naming conflicts.
+  -->
+
+  <!-- Ensure wrapper package classes are properly mapped -->
+  <!-- Example: rename a conflicting property
+  <attr path="/api/package[@name='com.csjads.wrapper']/class[@name='CsjSdkWrapper']/field[@name='someField']"
+        name="managedName">SomeFieldRenamed</attr>
+  -->
+</metadata>

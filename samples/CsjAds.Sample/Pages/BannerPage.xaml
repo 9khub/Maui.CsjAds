@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:csj="clr-namespace:CsjAds;assembly=CsjAds"
+             x:Class="CsjAds.Sample.Pages.BannerPage"
+             Title="Banner">
+
+    <Grid RowDefinitions="*,Auto" Padding="24">
+
+        <VerticalStackLayout Spacing="16" Grid.Row="0">
+            <Label Text="Banner Ad" FontSize="20" FontAttributes="Bold" />
+            <Label x:Name="LogLabel" Text="Banner ad will load below" FontSize="12" TextColor="Gray" />
+        </VerticalStackLayout>
+
+        <!-- Banner ad at the bottom of the screen -->
+        <csj:CsjBannerView Grid.Row="1"
+                           SlotId="945113161"
+                           HeightRequest="50"
+                           OnAdLoaded="OnBannerLoaded"
+                           OnAdFailed="OnBannerFailed"
+                           OnAdClicked="OnBannerClicked" />
+
+    </Grid>
+
+</ContentPage>

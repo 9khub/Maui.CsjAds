@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CsjAds.Sample.Pages.SplashPage"
+             Title="Splash">
+
+    <VerticalStackLayout Spacing="16" Padding="24">
+        <Label Text="Splash (Open Screen) Ad" FontSize="20" FontAttributes="Bold" />
+
+        <Entry x:Name="SlotIdEntry" Placeholder="Enter slot ID" Text="887341403" />
+
+        <Button Text="Load &amp; Show Splash Ad" Clicked="OnLoadAndShow"
+                BackgroundColor="#EF5350" TextColor="White" />
+
+        <Label x:Name="LogLabel" Text="Ready" FontSize="12" TextColor="Gray" />
+    </VerticalStackLayout>
+
+</ContentPage>

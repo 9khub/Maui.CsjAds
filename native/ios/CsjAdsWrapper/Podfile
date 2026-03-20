@@ -1,0 +1,17 @@
+platform :ios, '14.0'
+
+target 'CsjAdsWrapper' do
+  use_frameworks!
+
+  # CSJ (穿山甲) SDK — China domestic version
+  # Update version as needed from CocoaPods: https://cocoapods.org/pods/Ads-CN
+  pod 'Ads-CN', '~> 6.6'
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+    end
+  end
+end
