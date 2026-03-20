@@ -104,6 +104,11 @@ public class CsjRewardedVideoAd {
             }
 
             @Override
+            public void onRewardArrived(boolean isRewardValid, int rewardType, android.os.Bundle extraInfo) {
+                // Reward arrived — onRewardVerify is the primary callback
+            }
+
+            @Override
             public void onSkippedVideo() {
                 // User skipped the video
             }

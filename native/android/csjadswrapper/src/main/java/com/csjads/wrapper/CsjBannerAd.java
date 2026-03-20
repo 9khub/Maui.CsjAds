@@ -90,7 +90,7 @@ public class CsjBannerAd {
                     }
                 });
 
-                loadedAd.setDislikeCallback(null, new TTNativeExpressAd.DislikeInteractionCallback() {
+                loadedAd.setDislikeCallback(null, new com.bytedance.sdk.openadsdk.TTAdDislike.DislikeInteractionCallback() {
                     @Override
                     public void onShow() {
                     }

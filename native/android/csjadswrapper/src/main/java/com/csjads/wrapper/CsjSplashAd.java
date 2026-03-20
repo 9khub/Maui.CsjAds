@@ -4,18 +4,20 @@ import android.app.Activity;
 import android.content.Context;
 
 import com.bytedance.sdk.openadsdk.AdSlot;
+import com.bytedance.sdk.openadsdk.CSJAdError;
+import com.bytedance.sdk.openadsdk.CSJSplashAd;
 import com.bytedance.sdk.openadsdk.TTAdNative;
 import com.bytedance.sdk.openadsdk.TTAdSdk;
-import com.bytedance.sdk.openadsdk.TTSplashAd;
 
 /**
  * Thin wrapper for CSJ Splash (Open Screen) Ad.
+ * Uses CSJSplashAd (SDK 7.x API).
  */
 public class CsjSplashAd {
 
     private final String slotId;
     private final int timeoutMs;
-    private TTSplashAd loadedAd;
+    private CSJSplashAd loadedAd;
     private CsjAdCallback callback;
 
     /**
@@ -38,13 +40,13 @@ public class CsjSplashAd {
 
         adNative.loadSplashAd(adSlot, new TTAdNative.CSJSplashAdListener() {
             @Override
-            public void onSplashLoadSuccess(TTSplashAd ad) {
+            public void onSplashLoadSuccess(CSJSplashAd ad) {
                 loadedAd = ad;
                 // Don't notify yet — wait for onSplashRenderSuccess
             }
 
             @Override
-            public void onSplashLoadFail(com.bytedance.sdk.openadsdk.CSJAdError error) {
+            public void onSplashLoadFail(CSJAdError error) {
                 if (callback != null) {
                     int code = error != null ? error.getCode() : -1;
                     String msg = error != null ? error.getMsg() : "Unknown error";
@@ -53,13 +55,13 @@ public class CsjSplashAd {
             }
 
             @Override
-            public void onSplashRenderSuccess(TTSplashAd ad) {
+            public void onSplashRenderSuccess(CSJSplashAd ad) {
                 loadedAd = ad;
                 if (callback != null) callback.onAdLoaded();
             }
 
             @Override
-            public void onSplashRenderFail(TTSplashAd ad, com.bytedance.sdk.openadsdk.CSJAdError error) {
+            public void onSplashRenderFail(CSJSplashAd ad, CSJAdError error) {
                 if (callback != null) {
                     int code = error != null ? error.getCode() : -1;
                     String msg = error != null ? error.getMsg() : "Render failed";
@@ -77,19 +79,19 @@ public class CsjSplashAd {
             return;
         }
 
-        loadedAd.setSplashAdListener(new TTSplashAd.SplashAdListener() {
+        loadedAd.setSplashAdListener(new CSJSplashAd.SplashAdListener() {
             @Override
-            public void onSplashAdShow(TTSplashAd ad) {
+            public void onSplashAdShow(CSJSplashAd ad) {
                 if (callback != null) callback.onAdShow();
             }
 
             @Override
-            public void onSplashAdClick(TTSplashAd ad) {
+            public void onSplashAdClick(CSJSplashAd ad) {
                 if (callback != null) callback.onAdClicked();
             }
 
             @Override
-            public void onSplashAdClose(TTSplashAd ad, int closeType) {
+            public void onSplashAdClose(CSJSplashAd ad, int closeType) {
                 if (callback != null) callback.onAdClosed();
                 loadedAd = null;
             }

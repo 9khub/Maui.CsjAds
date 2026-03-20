@@ -18,7 +18,7 @@
     See native/android/README.md for build instructions.
   -->
   <ItemGroup>
-    <None Include="Jars\**" />
+    <AndroidLibrary Include="Jars\csjadswrapper.aar" />
   </ItemGroup>
 
   <!--
