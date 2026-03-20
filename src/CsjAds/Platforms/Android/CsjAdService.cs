@@ -19,11 +19,19 @@ internal sealed class CsjAdService : ICsjAdService
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
+        // Check device support before attempting init
+        if (!Com.Csjads.Wrapper.CsjSdkWrapper.IsDeviceSupported)
+        {
+            Console.WriteLine("[CsjAds] Device ABI not supported (x86/x86_64 emulator?), ads disabled");
+            _isConfigured = false;
+            return;
+        }
+
         var context = global::Android.App.Application.Context;
 
         // Call the native wrapper's init (pre-consent step)
-        // This sets up TTAdConfig without starting the SDK
-        Com.Csjads.Wrapper.CsjSdkWrapper.Init(
+        // Returns false if device is unsupported or init fails
+        var initResult = Com.Csjads.Wrapper.CsjSdkWrapper.Init(
             context,
             configuration.AppId,
             configuration.AppName,
@@ -34,13 +42,18 @@ internal sealed class CsjAdService : ICsjAdService
             configuration.Privacy.AllowWriteExternal,
             configuration.Privacy.CustomDeviceId);
 
-        _isConfigured = true;
+        _isConfigured = initResult;
+        if (!initResult)
+        {
+            Console.WriteLine("[CsjAds] SDK init returned false, ads disabled");
+        }
     }
 
     public Task<bool> StartAsync()
     {
+        // If device is not supported or init failed, return false silently
         if (!_isConfigured)
-            throw new InvalidOperationException("Call Configure() before StartAsync().");
+            return Task.FromResult(false);
 
         if (IsInitialized)
             return Task.FromResult(true);

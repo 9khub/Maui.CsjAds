@@ -21,6 +21,14 @@
     <AndroidLibrary Include="Jars\csjadswrapper.aar" />
   </ItemGroup>
 
+  <!-- CSJ SDK runtime dependency — included in APK but NOT bound to C# -->
+  <ItemGroup>
+    <AndroidMavenLibrary Include="com.pangle.cn:ads-sdk-pro"
+                         Version="7.4.2.2"
+                         Repository="https://artifact.bytedance.com/repository/pangle"
+                         Bind="false" />
+  </ItemGroup>
+
   <!--
     Alternatively, if using AndroidGradleProject (requires local Android SDK + Gradle):
     <AndroidGradleProject Include="../../native/android/build.gradle.kts">
