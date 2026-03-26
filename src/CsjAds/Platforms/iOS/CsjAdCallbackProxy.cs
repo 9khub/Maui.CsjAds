@@ -8,7 +8,7 @@ namespace CsjAds.Platforms.iOS;
 /// C# implementation of the native CsjAdCallback protocol.
 /// Routes ObjC delegate callbacks to C# Actions.
 /// </summary>
-internal sealed class CsjAdCallbackProxy : NSObject, ICsjAdCallbackDelegate
+internal sealed class CsjAdCallbackProxy : CsjAdCallbackDelegate
 {
     private readonly Action? _onLoaded;
     private readonly Action<nint, string?>? _onFailed;
@@ -33,17 +33,17 @@ internal sealed class CsjAdCallbackProxy : NSObject, ICsjAdCallbackDelegate
         _onReward = onReward;
     }
 
-    public void AdDidLoad() => _onLoaded?.Invoke();
+    public override void AdDidLoad() => _onLoaded?.Invoke();
 
-    public void AdDidFail(nint code, string message) => _onFailed?.Invoke(code, message);
+    public override void AdDidFail(nint code, string message) => _onFailed?.Invoke(code, message);
 
-    public void AdDidShow() => _onShown?.Invoke();
+    public override void AdDidShow() => _onShown?.Invoke();
 
-    public void AdDidClick() => _onClicked?.Invoke();
+    public override void AdDidClick() => _onClicked?.Invoke();
 
-    public void AdDidClose() => _onClosed?.Invoke();
+    public override void AdDidClose() => _onClosed?.Invoke();
 
-    public void RewardDidVerify(string rewardName, nint rewardAmount, bool verified)
+    public override void RewardDidVerify(string rewardName, nint rewardAmount, bool verified)
         => _onReward?.Invoke(rewardName, rewardAmount, verified);
 }
 #endif

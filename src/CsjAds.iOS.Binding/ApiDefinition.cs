@@ -5,7 +5,7 @@ using UIKit;
 namespace CsjAds.iOS.Binding;
 
 // CsjAdCallback protocol
-[Protocol]
+[Protocol, Model]
 [BaseType(typeof(NSObject))]
 interface CsjAdCallbackDelegate
 {
@@ -60,7 +60,7 @@ interface CsjRewardedVideoAd
     NativeHandle Constructor(string slotId);
 
     [Export("loadWithCallback:")]
-    void LoadWithCallback(ICsjAdCallbackDelegate callback);
+    void LoadWithCallback(CsjAdCallbackDelegate callback);
 
     [Export("showFromViewController:")]
     void ShowFrom(UIViewController viewController);
@@ -74,7 +74,7 @@ interface CsjInterstitialAd
     NativeHandle Constructor(string slotId);
 
     [Export("loadWithCallback:")]
-    void LoadWithCallback(ICsjAdCallbackDelegate callback);
+    void LoadWithCallback(CsjAdCallbackDelegate callback);
 
     [Export("showFromViewController:")]
     void ShowFrom(UIViewController viewController);
@@ -88,7 +88,7 @@ interface CsjBannerAd
     NativeHandle Constructor(string slotId, nint width, nint height);
 
     [Export("loadInView:viewController:callback:")]
-    void LoadIn(UIView container, [NullAllowed] UIViewController viewController, ICsjAdCallbackDelegate callback);
+    void LoadIn(UIView container, [NullAllowed] UIViewController viewController, CsjAdCallbackDelegate callback);
 
     [Export("destroy")]
     void Destroy();
@@ -102,7 +102,7 @@ interface CsjSplashAd
     NativeHandle Constructor(string slotId, nint timeoutMs);
 
     [Export("loadWithCallback:")]
-    void LoadWithCallback(ICsjAdCallbackDelegate callback);
+    void LoadWithCallback(CsjAdCallbackDelegate callback);
 
     [Export("showInWindow:")]
     void ShowInWindow(UIWindow window);
