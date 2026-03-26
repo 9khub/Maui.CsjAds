@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android</TargetFrameworks>
-    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <!-- net10.0 included so the project can restore/build on non-macOS CI (Linux) -->
+    <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24</SupportedOSPlatformVersion>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>CsjAds.Android.Binding</RootNamespace>
   </PropertyGroup>
@@ -17,12 +18,12 @@
     Place the built AAR in the Jars/ folder with Build Action = AndroidLibrary.
     See native/android/README.md for build instructions.
   -->
-  <ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.Contains('android'))">
     <AndroidLibrary Include="Jars\csjadswrapper.aar" />
   </ItemGroup>
 
   <!-- CSJ SDK runtime dependency — included in APK but NOT bound to C# -->
-  <ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.Contains('android'))">
     <AndroidMavenLibrary Include="com.pangle.cn:ads-sdk-pro"
                          Version="7.4.2.2"
                          Repository="https://artifact.bytedance.com/repository/pangle"

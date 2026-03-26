@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-ios</TargetFrameworks>
-    <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    <!-- net10.0 included so the project can restore/build on non-macOS CI (Linux) -->
+    <TargetFrameworks>net10.0;net10.0-ios</TargetFrameworks>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.0</SupportedOSPlatformVersion>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>CsjAds.iOS.Binding</RootNamespace>
   </PropertyGroup>
@@ -11,7 +12,7 @@
     When the native XCFramework exists: full binding project with ObjC registrar.
     When missing (simulator / dev without native build): plain class library, no native symbols.
   -->
-  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/CsjAdsWrapper.xcframework')">
+  <PropertyGroup Condition="$(TargetFramework.Contains('ios')) AND Exists('$(MSBuildProjectDirectory)/CsjAdsWrapper.xcframework')">
     <IsBindingProject>true</IsBindingProject>
     <_HasNativeFramework>true</_HasNativeFramework>
   </PropertyGroup>
@@ -21,14 +22,14 @@
     <NoWarn>$(NoWarn);CS0108;CS0114</NoWarn>
   </PropertyGroup>
 
-  <!-- Binding sources — only when native framework is present -->
-  <ItemGroup Condition="'$(_HasNativeFramework)' == 'true'">
+  <!-- Binding sources — only when native framework is present AND building for iOS -->
+  <ItemGroup Condition="'$(_HasNativeFramework)' == 'true' AND $(TargetFramework.Contains('ios'))">
     <ObjcBindingApiDefinition Include="ApiDefinition.cs" />
     <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
   </ItemGroup>
 
-  <!-- Exclude binding source files from normal C# compilation when no native framework -->
-  <ItemGroup Condition="'$(_HasNativeFramework)' != 'true'">
+  <!-- Exclude binding source files from normal C# compilation (non-iOS or no native framework) -->
+  <ItemGroup Condition="'$(_HasNativeFramework)' != 'true' OR !$(TargetFramework.Contains('ios'))">
     <Compile Remove="ApiDefinition.cs" />
     <Compile Remove="StructsAndEnums.cs" />
   </ItemGroup>
