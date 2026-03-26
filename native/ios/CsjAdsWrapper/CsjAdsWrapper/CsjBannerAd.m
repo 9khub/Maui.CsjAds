@@ -48,8 +48,7 @@
 #pragma mark - BUNativeExpressBannerViewDelegate
 
 - (void)nativeExpressBannerAdViewDidLoad:(BUNativeExpressBannerView *)bannerAdView {
-    // Ad loaded, render it
-    [bannerAdView render];
+    // v6.9+: rendering is automatic, no explicit render call needed
 }
 
 - (void)nativeExpressBannerAdViewRenderSuccess:(BUNativeExpressBannerView *)bannerAdView {
@@ -86,7 +85,7 @@
     }
 }
 
-- (void)nativeExpressBannerAdViewDislike:(BUNativeExpressBannerView *)bannerAdView {
+- (void)nativeExpressBannerAdView:(BUNativeExpressBannerView *)bannerAdView dislikeWithReason:(NSArray<BUDislikeWords *> *_Nullable)filterwords {
     if ([self.callback respondsToSelector:@selector(adDidClose)]) {
         [self.callback adDidClose];
     }

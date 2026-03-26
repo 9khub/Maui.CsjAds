@@ -42,15 +42,19 @@ public static class CsjAdsExtensions
         {
             handlers.AddHandler<CsjBannerView, Platforms.Android.Handlers.CsjBannerViewHandler>();
         });
-#elif IOS
+#elif IOS && !CSJ_NO_NATIVE
         builder.Services.AddSingleton<ICsjAdService, Platforms.iOS.CsjAdService>();
         builder.ConfigureMauiHandlers(handlers =>
         {
             handlers.AddHandler<CsjBannerView, Platforms.iOS.Handlers.CsjBannerViewHandler>();
         });
 #else
-        // No-op on unsupported platforms — register a stub service
+        // No-op on unsupported platforms or iOS simulator — register stub service + handler
         builder.Services.AddSingleton<ICsjAdService, Internal.NullAdService>();
+        builder.ConfigureMauiHandlers(handlers =>
+        {
+            handlers.AddHandler<CsjBannerView, Internal.NullBannerViewHandler>();
+        });
 #endif
 
         return builder;

@@ -1,4 +1,4 @@
-#if IOS
+#if IOS && !CSJ_NO_NATIVE
 using CsjAds.iOS.Binding;
 using Foundation;
 

@@ -1,6 +1,20 @@
 #import "CsjSdkWrapper.h"
 #import <BUAdSDK/BUAdSDK.h>
 
+#pragma mark - Privacy Provider
+
+@interface CsjPrivacyProvider : NSObject <BUAdSDKPrivacyProvider>
+@property (nonatomic, assign) BOOL locationEnabled;
+@end
+
+@implementation CsjPrivacyProvider
+- (BOOL)canUseLocation {
+    return self.locationEnabled;
+}
+@end
+
+#pragma mark - CsjSdkWrapper
+
 @implementation CsjSdkWrapper
 
 + (void)configureWithAppId:(NSString *)appId
@@ -13,8 +27,10 @@
     config.appID = appId;
     config.debugLog = debug ? @(1) : @(0);
 
-    // Privacy settings
-    config.allowPersonalizedAd = allowPersonalizedAd;
+    // Privacy settings via provider (v6.9+ API)
+    CsjPrivacyProvider *privacy = [[CsjPrivacyProvider alloc] init];
+    privacy.locationEnabled = allowLocation;
+    config.privacyProvider = privacy;
 
     [BUAdSDKManager setUserExtData:@""];
 

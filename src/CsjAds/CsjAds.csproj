@@ -12,6 +12,14 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24</SupportedOSPlatformVersion>
   </PropertyGroup>
 
+  <!--
+    When the native XCFramework is missing (simulator or dev without native build),
+    define CSJ_NO_NATIVE to skip iOS native code and use NullAdService fallback.
+  -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('ios')) AND !Exists('$(MSBuildThisFileDirectory)..\CsjAds.iOS.Binding\CsjAdsWrapper.xcframework')">
+    <DefineConstants>$(DefineConstants);CSJ_NO_NATIVE</DefineConstants>
+  </PropertyGroup>
+
   <!-- Suppress MAUI warnings for library project -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);NU1603</NoWarn>

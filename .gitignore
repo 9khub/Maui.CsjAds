@@ -33,8 +33,13 @@ native/android/.idea/
 native/ios/CsjAdsWrapper/Pods/
 native/ios/CsjAdsWrapper/Podfile.lock
 native/ios/CsjAdsWrapper/*.xcworkspace/
+native/ios/CsjAdsWrapper/*.xcodeproj/
 native/ios/CsjAdsWrapper/build/
 native/ios/CsjAdsWrapper/DerivedData/
+native/ios/CsjAdsWrapper/generate_project.rb
+
+## XCFramework (built locally or via CI, too large for git)
+src/CsjAds.iOS.Binding/CsjAdsWrapper.xcframework/
 
 ## Build outputs
 artifacts/
