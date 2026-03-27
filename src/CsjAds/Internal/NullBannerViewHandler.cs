@@ -21,11 +21,11 @@ using Microsoft.Maui.Handlers;
 
 namespace CsjAds.Internal;
 
-public sealed class NullBannerViewHandler : ViewHandler<CsjBannerView, View>
+public sealed class NullBannerViewHandler : ViewHandler<CsjBannerView, global::Android.Views.View>
 {
     public NullBannerViewHandler() : base(ViewMapper) { }
 
-    protected override View CreatePlatformView() => new View(Context!);
+    protected override global::Android.Views.View CreatePlatformView() => new global::Android.Views.View(Context!);
 }
 
 #else
