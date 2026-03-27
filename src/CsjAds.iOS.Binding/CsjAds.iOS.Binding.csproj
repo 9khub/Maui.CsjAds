@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- net10.0 included so the project can restore/build on non-macOS CI (Linux) -->
-    <TargetFrameworks>net10.0;net10.0-ios</TargetFrameworks>
+    <!-- net10.0 included so the project can restore/build on Linux CI; iOS only on macOS -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0;net10.0-ios</TargetFrameworks>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.0</SupportedOSPlatformVersion>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>CsjAds.iOS.Binding</RootNamespace>
