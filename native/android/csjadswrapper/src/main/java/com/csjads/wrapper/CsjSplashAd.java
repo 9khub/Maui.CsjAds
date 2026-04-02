@@ -8,6 +8,7 @@ import com.bytedance.sdk.openadsdk.CSJAdError;
 import com.bytedance.sdk.openadsdk.CSJSplashAd;
 import com.bytedance.sdk.openadsdk.TTAdNative;
 import com.bytedance.sdk.openadsdk.TTAdSdk;
+import com.bytedance.sdk.openadsdk.mediation.ad.MediationAdSlot;
 
 /**
  * Thin wrapper for CSJ Splash (Open Screen) Ad.
@@ -26,7 +27,7 @@ public class CsjSplashAd {
      */
     public CsjSplashAd(String slotId, int timeoutMs) {
         this.slotId = slotId;
-        this.timeoutMs = timeoutMs > 0 ? timeoutMs : 3000;
+        this.timeoutMs = timeoutMs > 0 ? timeoutMs : 5000;
     }
 
     public void load(Context context, final CsjAdCallback callback) {
@@ -34,9 +35,27 @@ public class CsjSplashAd {
 
         TTAdNative adNative = TTAdSdk.getAdManager().createAdNative(context);
 
-        AdSlot adSlot = new AdSlot.Builder()
+        // Use context-specific metrics for better accuracy
+        android.util.DisplayMetrics dm = context.getResources().getDisplayMetrics();
+        float widthDp = (float) dm.widthPixels / dm.density;
+        float heightDp = (float) dm.heightPixels / dm.density;
+
+        android.util.Log.d("CsjAdsWrapper",
+                "Requesting Splash ad, slotId=" + slotId + ", size=" + widthDp + "x" + heightDp
+                        + " dp (" + dm.widthPixels + "x" + dm.heightPixels + " px, density=" + dm.density + ")");
+
+        AdSlot.Builder slotBuilder = new AdSlot.Builder()
                 .setCodeId(slotId)
-                .build();
+                .setImageAcceptedSize(dm.widthPixels, dm.heightPixels)
+                .setExpressViewAcceptedSize(widthDp, heightDp)
+                .setAdCount(1);
+        if (CsjSdkWrapper.isUseMediation()) {
+            MediationAdSlot mediation = new MediationAdSlot.Builder()
+                    .setExtraObject("show_adn_load_error_detail", Boolean.TRUE)
+                    .build();
+            slotBuilder.setMediationAdSlot(mediation);
+        }
+        AdSlot adSlot = slotBuilder.build();
 
         adNative.loadSplashAd(adSlot, new TTAdNative.CSJSplashAdListener() {
             @Override
@@ -50,6 +69,8 @@ public class CsjSplashAd {
                 if (callback != null) {
                     int code = error != null ? error.getCode() : -1;
                     String msg = error != null ? error.getMsg() : "Unknown error";
+                    android.util.Log.e("CsjAdsWrapper",
+                            "Splash load failed, slotId=" + slotId + ", code=" + code + ", message=" + msg);
                     callback.onAdFailed(code, msg);
                 }
             }
@@ -65,6 +86,8 @@ public class CsjSplashAd {
                 if (callback != null) {
                     int code = error != null ? error.getCode() : -1;
                     String msg = error != null ? error.getMsg() : "Render failed";
+                    android.util.Log.e("CsjAdsWrapper",
+                            "Splash render failed, slotId=" + slotId + ", code=" + code + ", message=" + msg);
                     callback.onAdFailed(code, msg);
                 }
             }

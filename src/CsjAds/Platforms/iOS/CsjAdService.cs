@@ -67,6 +67,11 @@ internal sealed class CsjAdService : ICsjAdService
         return new CsjSplashAdImpl(slotId);
     }
 
+    public void LaunchDebugTool(string url)
+    {
+        // No-op for iOS as it's not implemented yet
+    }
+
     private void EnsureInitialized()
     {
         if (!IsInitialized)

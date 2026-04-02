@@ -3,9 +3,12 @@ package com.csjads.wrapper;
 import android.content.Context;
 import android.os.Build;
 
+import com.bytedance.sdk.openadsdk.LocationProvider;
 import com.bytedance.sdk.openadsdk.TTAdConfig;
 import com.bytedance.sdk.openadsdk.TTAdSdk;
 import com.bytedance.sdk.openadsdk.TTCustomController;
+import com.bytedance.sdk.openadsdk.mediation.init.IMediationPrivacyConfig;
+import com.bytedance.sdk.openadsdk.mediation.init.MediationPrivacyConfig;
 
 /**
  * Thin wrapper around TTAdSdk for .NET binding.
@@ -20,9 +23,15 @@ public final class CsjSdkWrapper {
 
     private static volatile boolean sInitAttempted = false;
     private static volatile boolean sInitSuccess = false;
+    private static volatile boolean sUseMediation = false;
     private static Thread.UncaughtExceptionHandler sOriginalHandler;
 
     private CsjSdkWrapper() {}
+
+    /** Mirrors last successful {@link #init} <code>useMediation</code> for ad request builders. */
+    public static boolean isUseMediation() {
+        return sUseMediation;
+    }
 
     /**
      * Check if the current device supports CSJ ads.
@@ -58,6 +67,10 @@ public final class CsjSdkWrapper {
             boolean allowLocation,
             boolean allowPhoneState,
             boolean allowWriteExternal,
+            boolean allowWifiState,
+            boolean allowAndroidId,
+            String androidIdOverride,
+            boolean useMediation,
             String customDeviceId) {
 
         if (!isDeviceSupported()) {
@@ -65,9 +78,17 @@ public final class CsjSdkWrapper {
             return false;
         }
 
+        android.util.Log.d("CsjAdsWrapper", "SDK Init: AppId=" + appId + ", useMediation=" + useMediation);
+        sUseMediation = useMediation;
+
         try {
             // Install a safety handler to catch CSJ SDK internal thread crashes
             installCrashGuard();
+
+            final String oaidForSdk = customDeviceId != null ? customDeviceId : "";
+            final String androidIdTrimmed = (androidIdOverride != null && !androidIdOverride.trim().isEmpty())
+                    ? androidIdOverride.trim()
+                    : null;
 
             TTCustomController customController = new TTCustomController() {
                 @Override
@@ -76,13 +97,50 @@ public final class CsjSdkWrapper {
                 }
 
                 @Override
+                public LocationProvider getTTLocation() {
+                    if (!allowLocation) {
+                        return null;
+                    }
+                    // 与官方聚合示例一致：在授权位置时提供坐标（测试/合规场景可由上层关闭 allowLocation）
+                    return new LocationProvider() {
+                        @Override
+                        public double getLongitude() {
+                            return 116.4074;
+                        }
+
+                        @Override
+                        public double getLatitude() {
+                            return 39.9042;
+                        }
+                    };
+                }
+
+                @Override
                 public boolean isCanUsePhoneState() {
                     return allowPhoneState;
                 }
 
                 @Override
+                public boolean isCanUseWifiState() {
+                    return allowWifiState;
+                }
+
+                @Override
                 public boolean isCanUseWriteExternal() {
                     return allowWriteExternal;
+                }
+
+                @Override
+                public boolean isCanUseAndroidId() {
+                    return allowAndroidId;
+                }
+
+                @Override
+                public String getAndroidId() {
+                    if (!allowAndroidId) {
+                        return super.getAndroidId();
+                    }
+                    return androidIdTrimmed != null ? androidIdTrimmed : super.getAndroidId();
                 }
 
                 @Override
@@ -92,7 +150,23 @@ public final class CsjSdkWrapper {
 
                 @Override
                 public String getDevOaid() {
-                    return customDeviceId != null ? customDeviceId : "";
+                    return oaidForSdk;
+                }
+
+                /** 融合 SDK（mediation-sdk）聚合隐私配置，与官方 GroMore 初始化示例一致。 */
+                @Override
+                public IMediationPrivacyConfig getMediationPrivacyConfig() {
+                    return new MediationPrivacyConfig() {
+                        @Override
+                        public boolean isLimitPersonalAds() {
+                            return !allowPersonalizedAd;
+                        }
+
+                        @Override
+                        public boolean isProgrammaticRecommend() {
+                            return allowPersonalizedAd;
+                        }
+                    };
                 }
             };
 
@@ -100,6 +174,8 @@ public final class CsjSdkWrapper {
                     .appId(appId)
                     .appName(appName)
                     .debug(debug)
+                    .useMediation(useMediation)
+                    .themeStatus(0)
                     .supportMultiProcess(false)
                     .customController(customController)
                     .build();

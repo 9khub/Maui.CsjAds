@@ -12,6 +12,7 @@ internal sealed class CsjAdService : ICsjAdService
 {
     private CsjAdConfiguration? _configuration;
     private bool _isConfigured;
+    private SdkStartCallback? _sdkStartCallback;
 
     public bool IsInitialized { get; private set; }
 
@@ -29,8 +30,9 @@ internal sealed class CsjAdService : ICsjAdService
 
         var context = global::Android.App.Application.Context;
 
+        Console.WriteLine($"[CsjAds] Configuring SDK: AppId={configuration.AppId}, UseMediation={configuration.UseMediation}");
+
         // Call the native wrapper's init (pre-consent step)
-        // Returns false if device is unsupported or init fails
         var initResult = Com.Csjads.Wrapper.CsjSdkWrapper.Init(
             context,
             configuration.AppId,
@@ -40,6 +42,10 @@ internal sealed class CsjAdService : ICsjAdService
             configuration.Privacy.AllowLocation,
             configuration.Privacy.AllowPhoneState,
             configuration.Privacy.AllowWriteExternal,
+            configuration.Privacy.AllowWifiState,
+            configuration.Privacy.AllowAndroidId,
+            configuration.Privacy.AndroidIdOverride,
+            configuration.UseMediation,
             configuration.Privacy.CustomDeviceId);
 
         _isConfigured = initResult;
@@ -49,24 +55,72 @@ internal sealed class CsjAdService : ICsjAdService
         }
     }
 
-    public Task<bool> StartAsync()
+    public async Task<bool> StartAsync()
     {
         // If device is not supported or init failed, return false silently
         if (!_isConfigured)
-            return Task.FromResult(false);
+            return false;
 
         if (IsInitialized)
-            return Task.FromResult(true);
+            return true;
 
         var tcs = new TaskCompletionSource<bool>();
 
-        Com.Csjads.Wrapper.CsjSdkWrapper.Start(new SdkStartCallback(success =>
-        {
-            IsInitialized = success;
-            tcs.TrySetResult(success);
-        }));
+        Console.WriteLine("[CsjAds] Starting SDK...");
 
-        return tcs.Task;
+        _sdkStartCallback = new SdkStartCallback(async success =>
+        {
+            if (success)
+            {
+                // Step 3: Wait for internal readiness (isInitSuccess)
+                bool isReady = await WaitForInternalReadinessAsync();
+                IsInitialized = isReady;
+                tcs.TrySetResult(isReady);
+            }
+            else
+            {
+                IsInitialized = false;
+                tcs.TrySetResult(false);
+            }
+        });
+
+        Com.Csjads.Wrapper.CsjSdkWrapper.Start(_sdkStartCallback);
+
+        return await tcs.Task;
+    }
+
+    private async Task<bool> WaitForInternalReadinessAsync()
+    {
+        const int maxRetries = 10;
+        const int delayMs = 500;
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                // Use JNI to call TTAdSdk.isInitSuccess() directly
+                // This checks if the SDK rendering engine is actually ready
+                IntPtr ttAdSdkClass = global::Android.Runtime.JNIEnv.FindClass("com/bytedance/sdk/openadsdk/TTAdSdk");
+                IntPtr isInitSuccessMethod = global::Android.Runtime.JNIEnv.GetStaticMethodID(ttAdSdkClass, "isInitSuccess", "()Z");
+                bool isReady = global::Android.Runtime.JNIEnv.CallStaticBooleanMethod(ttAdSdkClass, isInitSuccessMethod);
+
+                if (isReady)
+                {
+                    Console.WriteLine($"[CsjAds] SDK internal readiness confirmed after {i * delayMs}ms.");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CsjAds] Error checking readiness: {ex.Message}");
+            }
+
+            Console.WriteLine($"[CsjAds] Waiting for SDK internal readiness... (attempt {i + 1}/{maxRetries})");
+            await Task.Delay(delayMs);
+        }
+
+        Console.WriteLine("[CsjAds] SDK internal readiness timeout.");
+        return false;
     }
 
     public ICsjRewardedVideoAd CreateRewardedVideoAd(string slotId)
@@ -85,6 +139,11 @@ internal sealed class CsjAdService : ICsjAdService
     {
         EnsureInitialized();
         return new CsjSplashAdImpl(slotId);
+    }
+    
+    public void LaunchDebugTool(string url)
+    {
+        // This is a placeholder for debugging purposes
     }
 
     private void EnsureInitialized()

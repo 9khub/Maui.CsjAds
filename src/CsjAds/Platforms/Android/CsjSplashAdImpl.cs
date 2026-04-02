@@ -7,6 +7,7 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
 {
     private readonly string _slotId;
     private Com.Csjads.Wrapper.CsjSplashAd? _nativeAd;
+    private AdCallback? _adCallback;
     private bool _disposed;
 
     public CsjSplashAdImpl(string slotId)
@@ -15,7 +16,7 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
     }
 
     public bool IsLoaded { get; private set; }
-    public int TimeoutMilliseconds { get; set; } = 3000;
+    public int TimeoutMilliseconds { get; set; } = 5000;
 
     public event EventHandler<AdEventArgs>? OnAdLoaded;
     public event EventHandler<AdErrorEventArgs>? OnAdFailed;
@@ -29,7 +30,7 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
         var tcs = new TaskCompletionSource();
 
         _nativeAd = new Com.Csjads.Wrapper.CsjSplashAd(_slotId, TimeoutMilliseconds);
-        _nativeAd.Load(global::Android.App.Application.Context, new AdCallback(
+        _adCallback = new AdCallback(
             onLoaded: () =>
             {
                 IsLoaded = true;
@@ -49,7 +50,12 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
             {
                 IsLoaded = false;
                 MainThreadDispatcher.Dispatch(() => OnAdClosed?.Invoke(this, new AdEventArgs()));
-            }));
+            });
+
+        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity 
+            ?? throw new InvalidOperationException("No current activity available for ad loading.");
+
+        _nativeAd.Load(activity, _adCallback);
 
         return tcs.Task;
     }
@@ -72,6 +78,7 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
         _disposed = true;
         _nativeAd?.Dispose();
         _nativeAd = null;
+        _adCallback = null;
     }
 
     private void ThrowIfDisposed()

@@ -24,7 +24,8 @@ android {
 }
 
 dependencies {
-    // CSJ (穿山甲) SDK — China domestic version
-    // Update version as needed from: https://www.csjplatform.com/supportcenter/5395
-    implementation("com.pangle.cn:ads-sdk-pro:7.4.2.2")
+    // 穿山甲融合 SDK（GroMore）：内含穿山甲 + 聚合能力；与 ads-sdk-pro 勿同时引入，避免 lib 重复。
+    // Maven 版本以 https://artifact.bytedance.com/repository/pangle 为准（当前 mediation-sdk 最新 7.4.2.1）。
+    implementation("com.pangle.cn:mediation-sdk:7.4.2.1")
+    implementation("com.squareup.okhttp3:okhttp:3.12.1")
 }

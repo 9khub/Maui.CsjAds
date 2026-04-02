@@ -22,10 +22,10 @@
     <AndroidLibrary Include="Jars\csjadswrapper.aar" />
   </ItemGroup>
 
-  <!-- CSJ SDK runtime dependency — included in APK but NOT bound to C# -->
+  <!-- 穿山甲融合 SDK（GroMore），运行时打入 APK；勿与 ads-sdk-pro 并存 -->
   <ItemGroup Condition="$(TargetFramework.Contains('android'))">
-    <AndroidMavenLibrary Include="com.pangle.cn:ads-sdk-pro"
-                         Version="7.4.2.2"
+    <AndroidMavenLibrary Include="com.pangle.cn:mediation-sdk"
+                         Version="7.4.2.1"
                          Repository="https://artifact.bytedance.com/repository/pangle"
                          Bind="false" />
   </ItemGroup>

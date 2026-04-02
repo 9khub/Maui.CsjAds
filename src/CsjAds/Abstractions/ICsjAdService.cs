@@ -39,4 +39,10 @@ public interface ICsjAdService
     /// Create a splash (open screen) ad loader for the given slot.
     /// </summary>
     ICsjSplashAd CreateSplashAd(string slotId);
+
+    /// <summary>
+    /// Launch the CSJ Debug Tool (可视化测试工具).
+    /// </summary>
+    /// <param name="url">The URL obtained from the CSJ portal (usually via QR code).</param>
+    void LaunchDebugTool(string url);
 }

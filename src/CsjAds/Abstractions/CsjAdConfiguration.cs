@@ -21,6 +21,12 @@ public sealed class CsjAdConfiguration
     public bool IsDebug { get; set; }
 
     /// <summary>
+    /// GroMore 聚合（<c>TTAdConfig.useMediation</c>）。工程使用 <c>mediation-sdk</c> 且广告位为 GroMore 聚合位时应为 true（与后台瀑布一致）。
+    /// 若代码位为纯穿山甲直连位且使用 <c>ads-sdk-pro</c>，则为 false。错配时易出现瀑布首层失败（如 602 / 20005）。
+    /// </summary>
+    public bool UseMediation { get; set; }
+
+    /// <summary>
     /// Privacy-related configuration for user consent compliance.
     /// </summary>
     public CsjPrivacyConfiguration Privacy { get; set; } = new();

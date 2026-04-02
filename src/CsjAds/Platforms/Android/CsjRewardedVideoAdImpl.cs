@@ -7,6 +7,7 @@ internal sealed class CsjRewardedVideoAdImpl : ICsjRewardedVideoAd
 {
     private readonly string _slotId;
     private Com.Csjads.Wrapper.CsjRewardedVideoAd? _nativeAd;
+    private AdCallback? _adCallback;
     private bool _disposed;
 
     public CsjRewardedVideoAdImpl(string slotId)
@@ -29,7 +30,7 @@ internal sealed class CsjRewardedVideoAdImpl : ICsjRewardedVideoAd
         var tcs = new TaskCompletionSource();
 
         _nativeAd = new Com.Csjads.Wrapper.CsjRewardedVideoAd(_slotId);
-        _nativeAd.Load(global::Android.App.Application.Context, new AdCallback(
+        _adCallback = new AdCallback(
             onLoaded: () =>
             {
                 IsLoaded = true;
@@ -54,7 +55,9 @@ internal sealed class CsjRewardedVideoAdImpl : ICsjRewardedVideoAd
             {
                 var reward = new RewardInfo(name ?? "", amount, verified);
                 MainThreadDispatcher.Dispatch(() => OnRewardVerified?.Invoke(this, new RewardEventArgs(reward)));
-            }));
+            });
+
+        _nativeAd.Load(global::Android.App.Application.Context, _adCallback);
 
         return tcs.Task;
     }
@@ -77,6 +80,7 @@ internal sealed class CsjRewardedVideoAdImpl : ICsjRewardedVideoAd
         _disposed = true;
         _nativeAd?.Dispose();
         _nativeAd = null;
+        _adCallback = null;
     }
 
     private void ThrowIfDisposed()

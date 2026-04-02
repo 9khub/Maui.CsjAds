@@ -24,6 +24,22 @@ public sealed class CsjPrivacyConfiguration
     public bool AllowWriteExternal { get; set; }
 
     /// <summary>
+    /// Whether the SDK may use Wi-Fi state (matches <c>TTCustomController.isCanUseWifiState</c>).
+    /// </summary>
+    public bool AllowWifiState { get; set; } = true;
+
+    /// <summary>
+    /// Whether the SDK may use Android ID (matches <c>TTCustomController.isCanUseAndroidId</c>).
+    /// </summary>
+    public bool AllowAndroidId { get; set; } = true;
+
+    /// <summary>
+    /// Optional override for <c>TTCustomController.getAndroidId()</c> (e.g. 与穿山甲后台测试设备 Android ID 一致).
+    /// 为空则使用系统默认采集逻辑。
+    /// </summary>
+    public string? AndroidIdOverride { get; set; }
+
+    /// <summary>
     /// Whether to allow personalized ad recommendations.
     /// </summary>
     public bool AllowPersonalizedAd { get; set; } = true;

@@ -12,6 +12,7 @@ namespace CsjAds.Platforms.Android.Handlers;
 internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::Android.Widget.FrameLayout>
 {
     private Com.Csjads.Wrapper.CsjBannerAd? _nativeBannerAd;
+    private BannerCallback? _bannerCallback;
 
     public static readonly IPropertyMapper<CsjBannerView, CsjBannerViewHandler> Mapper =
         new PropertyMapper<CsjBannerView, CsjBannerViewHandler>(ViewMapper)
@@ -36,6 +37,7 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
         _nativeBannerAd?.Destroy();
         _nativeBannerAd?.Dispose();
         _nativeBannerAd = null;
+        _bannerCallback = null;
         platformView.RemoveAllViews();
         base.DisconnectHandler(platformView);
     }
@@ -70,7 +72,10 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
         _nativeBannerAd = new Com.Csjads.Wrapper.CsjBannerAd(
             VirtualView.SlotId, width, height);
 
-        _nativeBannerAd.Load(Context, container, new BannerCallback(VirtualView));
+        _bannerCallback = new BannerCallback(VirtualView);
+
+        var context = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity ?? Context;
+        _nativeBannerAd.Load(context, container, _bannerCallback);
     }
 
     private sealed class BannerCallback : Java.Lang.Object, Com.Csjads.Wrapper.ICsjAdCallback

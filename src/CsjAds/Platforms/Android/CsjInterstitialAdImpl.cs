@@ -7,6 +7,7 @@ internal sealed class CsjInterstitialAdImpl : ICsjInterstitialAd
 {
     private readonly string _slotId;
     private Com.Csjads.Wrapper.CsjInterstitialAd? _nativeAd;
+    private AdCallback? _adCallback;
     private bool _disposed;
 
     public CsjInterstitialAdImpl(string slotId)
@@ -28,7 +29,7 @@ internal sealed class CsjInterstitialAdImpl : ICsjInterstitialAd
         var tcs = new TaskCompletionSource();
 
         _nativeAd = new Com.Csjads.Wrapper.CsjInterstitialAd(_slotId);
-        _nativeAd.Load(global::Android.App.Application.Context, new AdCallback(
+        _adCallback = new AdCallback(
             onLoaded: () =>
             {
                 IsLoaded = true;
@@ -48,7 +49,9 @@ internal sealed class CsjInterstitialAdImpl : ICsjInterstitialAd
             {
                 IsLoaded = false;
                 MainThreadDispatcher.Dispatch(() => OnAdClosed?.Invoke(this, new AdEventArgs()));
-            }));
+            });
+
+        _nativeAd.Load(global::Android.App.Application.Context, _adCallback);
 
         return tcs.Task;
     }
@@ -71,6 +74,7 @@ internal sealed class CsjInterstitialAdImpl : ICsjInterstitialAd
         _disposed = true;
         _nativeAd?.Dispose();
         _nativeAd = null;
+        _adCallback = null;
     }
 
     private void ThrowIfDisposed()

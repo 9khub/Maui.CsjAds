@@ -8,6 +8,7 @@ import com.bytedance.sdk.openadsdk.AdSlot;
 import com.bytedance.sdk.openadsdk.TTAdNative;
 import com.bytedance.sdk.openadsdk.TTAdSdk;
 import com.bytedance.sdk.openadsdk.TTNativeExpressAd;
+import com.bytedance.sdk.openadsdk.mediation.ad.MediationAdSlot;
 
 import java.util.List;
 
@@ -30,8 +31,9 @@ public class CsjBannerAd {
      */
     public CsjBannerAd(String slotId, int width, int height) {
         this.slotId = slotId;
-        this.width = width > 0 ? width : 320;
-        this.height = height > 0 ? height : 50;
+        // Keep 0 values for adaptive mode (SDK computes the best size).
+        this.width = width;
+        this.height = height;
     }
 
     public void load(Context context, final ViewGroup container, final CsjAdCallback callback) {
@@ -39,15 +41,35 @@ public class CsjBannerAd {
 
         TTAdNative adNative = TTAdSdk.getAdManager().createAdNative(context);
 
-        AdSlot adSlot = new AdSlot.Builder()
+        // Use system metrics for DIP calculations.
+        android.util.DisplayMetrics dm = android.content.res.Resources.getSystem().getDisplayMetrics();
+        int finalWidth = width > 0 ? width : (int)(dm.widthPixels / dm.density);
+        int finalHeight = height > 0 ? height : 0;
+
+        android.util.Log.d("CsjAdsWrapper",
+                "Requesting Banner ad, slotId=" + slotId + ", size=" + finalWidth + "x" + finalHeight + "dp");
+
+        int imageWidthPx = finalWidth > 0 ? (int) (finalWidth * dm.density) : dm.widthPixels;
+        int imageHeightPx = finalHeight > 0 ? (int) (finalHeight * dm.density) : 0;
+
+        AdSlot.Builder slotBuilder = new AdSlot.Builder()
                 .setCodeId(slotId)
-                .setExpressViewAcceptedSize(width, height)
-                .setAdCount(1)
-                .build();
+                .setImageAcceptedSize(imageWidthPx, imageHeightPx)
+                .setExpressViewAcceptedSize(finalWidth, finalHeight)
+                .setAdCount(1);
+        if (CsjSdkWrapper.isUseMediation()) {
+            MediationAdSlot mediation = new MediationAdSlot.Builder()
+                    .setExtraObject("show_adn_load_error_detail", Boolean.TRUE)
+                    .build();
+            slotBuilder.setMediationAdSlot(mediation);
+        }
+        AdSlot adSlot = slotBuilder.build();
 
         adNative.loadBannerExpressAd(adSlot, new TTAdNative.NativeExpressAdListener() {
             @Override
             public void onError(int code, String message) {
+                android.util.Log.e("CsjAdsWrapper",
+                        "Banner load failed, slotId=" + slotId + ", code=" + code + ", message=" + message);
                 if (callback != null) {
                     callback.onAdFailed(code, message);
                 }
@@ -56,6 +78,8 @@ public class CsjBannerAd {
             @Override
             public void onNativeExpressAdLoad(List<TTNativeExpressAd> ads) {
                 if (ads == null || ads.isEmpty()) {
+                    android.util.Log.e("CsjAdsWrapper",
+                            "Banner load returned empty ads, slotId=" + slotId);
                     if (callback != null) {
                         callback.onAdFailed(-1, "No ad returned");
                     }
@@ -77,6 +101,8 @@ public class CsjBannerAd {
 
                     @Override
                     public void onRenderFail(View view, String msg, int code) {
+                        android.util.Log.e("CsjAdsWrapper",
+                                "Banner render failed, slotId=" + slotId + ", code=" + code + ", message=" + msg);
                         if (callback != null) callback.onAdFailed(code, msg);
                     }
 
@@ -106,7 +132,8 @@ public class CsjBannerAd {
                     }
                 });
 
-                loadedAd.render();
+                // Render on main thread to avoid possible thread-scheduling issues.
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> loadedAd.render());
             }
         });
     }
