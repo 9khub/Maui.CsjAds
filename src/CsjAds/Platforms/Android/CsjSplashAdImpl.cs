@@ -44,12 +44,24 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
                 MainThreadDispatcher.Dispatch(() => OnAdFailed?.Invoke(this, new AdErrorEventArgs(error)));
                 tcs.TrySetException(new Exception($"Splash ad load failed: {error}"));
             },
-            onShown: () => MainThreadDispatcher.Dispatch(() => OnAdShown?.Invoke(this, new AdEventArgs())),
-            onClicked: () => MainThreadDispatcher.Dispatch(() => OnAdClicked?.Invoke(this, new AdEventArgs())),
+            onShown: () => MainThreadDispatcher.Dispatch(() =>
+            {
+                try { OnAdShown?.Invoke(this, new AdEventArgs()); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdShown: {ex}"); }
+            }),
+            onClicked: () => MainThreadDispatcher.Dispatch(() =>
+            {
+                try { OnAdClicked?.Invoke(this, new AdEventArgs()); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdClicked: {ex}"); }
+            }),
             onClosed: () =>
             {
                 IsLoaded = false;
-                MainThreadDispatcher.Dispatch(() => OnAdClosed?.Invoke(this, new AdEventArgs()));
+                MainThreadDispatcher.Dispatch(() =>
+                {
+                    try { OnAdClosed?.Invoke(this, new AdEventArgs()); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdClosed: {ex}"); }
+                });
             });
 
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity 
