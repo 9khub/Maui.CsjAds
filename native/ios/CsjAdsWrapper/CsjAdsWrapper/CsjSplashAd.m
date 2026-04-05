@@ -43,6 +43,9 @@
 }
 
 - (void)splashAdLoadFail:(BUSplashAd *)splashAd error:(BUAdError *_Nullable)error {
+    NSLog(@"[CsjSplashAd] splashAdLoadFail: code=%ld, domain=%@",
+          (long)(error ? error.code : -1),
+          error.domain ?: @"(nil)");
     if ([self.callback respondsToSelector:@selector(adDidFailWithCode:message:)]) {
         NSInteger code = error ? error.code : -1;
         NSString *msg = error ? error.localizedDescription : @"Load failed";
