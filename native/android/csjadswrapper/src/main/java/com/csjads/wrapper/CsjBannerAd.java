@@ -108,11 +108,46 @@ public class CsjBannerAd {
 
                     @Override
                     public void onRenderSuccess(View view, float w, float h) {
-                        // Add the rendered ad view to the container
-                        container.removeAllViews();
-                        container.addView(view);
-
-                        if (callback != null) callback.onAdLoaded();
+                        // 部分机型/SDK（如 Android 16 + 聚合）会在 onRenderSuccess 传入 null，
+                        // 直接 addView 会抛出 IllegalArgumentException 导致进程崩溃。
+                        if (view == null) {
+                            android.util.Log.e("CsjAdsWrapper",
+                                    "Banner onRenderSuccess: express view is null, slotId=" + slotId);
+                            if (callback != null) {
+                                callback.onAdFailed(-1001, "Express render returned null view");
+                            }
+                            return;
+                        }
+                        if (container == null) {
+                            android.util.Log.e("CsjAdsWrapper",
+                                    "Banner onRenderSuccess: container is null, slotId=" + slotId);
+                            if (callback != null) {
+                                callback.onAdFailed(-1002, "Banner container is null");
+                            }
+                            return;
+                        }
+                        try {
+                            if (!container.isAttachedToWindow()) {
+                                android.util.Log.w("CsjAdsWrapper",
+                                        "Banner container not attached, slotId=" + slotId + " — addView may still proceed");
+                            }
+                            android.view.ViewParent parent = view.getParent();
+                            if (parent instanceof ViewGroup) {
+                                ((ViewGroup) parent).removeView(view);
+                            }
+                            container.removeAllViews();
+                            container.addView(view);
+                            if (callback != null) {
+                                callback.onAdLoaded();
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("CsjAdsWrapper",
+                                    "Banner addView failed, slotId=" + slotId + ": " + e.getMessage(), e);
+                            if (callback != null) {
+                                String msg = e.getMessage() != null ? e.getMessage() : "addView failed";
+                                callback.onAdFailed(-1003, msg);
+                            }
+                        }
                     }
                 });
 
@@ -123,7 +158,13 @@ public class CsjBannerAd {
 
                     @Override
                     public void onSelected(int position, String value, boolean enforce) {
-                        container.removeAllViews();
+                        try {
+                            if (container != null) {
+                                container.removeAllViews();
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("CsjAdsWrapper", "Banner dislike removeAllViews: " + e.getMessage());
+                        }
                         if (callback != null) callback.onAdClosed();
                     }
 
@@ -133,7 +174,26 @@ public class CsjBannerAd {
                 });
 
                 // Render on main thread to avoid possible thread-scheduling issues.
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> loadedAd.render());
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    TTNativeExpressAd ad = loadedAd;
+                    if (ad == null) {
+                        android.util.Log.e("CsjAdsWrapper",
+                                "Banner render skipped: loadedAd is null, slotId=" + slotId);
+                        if (callback != null) {
+                            callback.onAdFailed(-1004, "Express ad destroyed before render");
+                        }
+                        return;
+                    }
+                    try {
+                        ad.render();
+                    } catch (Throwable t) {
+                        android.util.Log.e("CsjAdsWrapper", "Banner render() threw, slotId=" + slotId, t);
+                        if (callback != null) {
+                            String m = t.getMessage();
+                            callback.onAdFailed(-1005, m != null ? m : "render() failed");
+                        }
+                    }
+                });
             }
         });
     }

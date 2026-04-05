@@ -1,4 +1,5 @@
 #if ANDROID
+using System.Diagnostics;
 using CsjAds.Internal;
 
 namespace CsjAds.Platforms.Android;
@@ -27,47 +28,109 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
     public Task LoadAsync()
     {
         ThrowIfDisposed();
-        var tcs = new TaskCompletionSource();
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void CompleteFailed(int code, string? msg)
+        {
+            IsLoaded = false;
+            var error = new AdError(code, msg ?? "Unknown error");
+            MainThreadDispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    OnAdFailed?.Invoke(this, new AdErrorEventArgs(error));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] OnAdFailed handler: {ex}");
+                }
+            });
+            tcs.TrySetException(new InvalidOperationException($"Splash ad load failed: {error}"));
+        }
 
         _nativeAd = new Com.Csjads.Wrapper.CsjSplashAd(_slotId, TimeoutMilliseconds);
         _adCallback = new AdCallback(
             onLoaded: () =>
             {
-                IsLoaded = true;
-                MainThreadDispatcher.Dispatch(() => OnAdLoaded?.Invoke(this, new AdEventArgs()));
-                tcs.TrySetResult();
+                try
+                {
+                    IsLoaded = true;
+                    MainThreadDispatcher.Dispatch(() =>
+                    {
+                        try
+                        {
+                            OnAdLoaded?.Invoke(this, new AdEventArgs());
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[CsjAds] OnAdLoaded handler: {ex}");
+                        }
+                    });
+                    tcs.TrySetResult();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Splash onLoaded path: {ex}");
+                    CompleteFailed(-1, ex.Message);
+                }
             },
-            onFailed: (code, msg) =>
-            {
-                IsLoaded = false;
-                var error = new AdError(code, msg ?? "Unknown error");
-                MainThreadDispatcher.Dispatch(() => OnAdFailed?.Invoke(this, new AdErrorEventArgs(error)));
-                tcs.TrySetException(new Exception($"Splash ad load failed: {error}"));
-            },
+            onFailed: CompleteFailed,
             onShown: () => MainThreadDispatcher.Dispatch(() =>
             {
-                try { OnAdShown?.Invoke(this, new AdEventArgs()); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdShown: {ex}"); }
+                try
+                {
+                    OnAdShown?.Invoke(this, new AdEventArgs());
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] OnAdShown: {ex}");
+                }
             }),
             onClicked: () => MainThreadDispatcher.Dispatch(() =>
             {
-                try { OnAdClicked?.Invoke(this, new AdEventArgs()); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdClicked: {ex}"); }
+                try
+                {
+                    OnAdClicked?.Invoke(this, new AdEventArgs());
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] OnAdClicked: {ex}");
+                }
             }),
             onClosed: () =>
             {
-                IsLoaded = false;
-                MainThreadDispatcher.Dispatch(() =>
+                try
                 {
-                    try { OnAdClosed?.Invoke(this, new AdEventArgs()); }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsjAds] OnAdClosed: {ex}"); }
-                });
+                    IsLoaded = false;
+                    MainThreadDispatcher.Dispatch(() =>
+                    {
+                        try
+                        {
+                            OnAdClosed?.Invoke(this, new AdEventArgs());
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[CsjAds] OnAdClosed: {ex}");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Splash onClosed path: {ex}");
+                }
             });
 
-        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity 
-            ?? throw new InvalidOperationException("No current activity available for ad loading.");
-
-        _nativeAd.Load(activity, _adCallback);
+        try
+        {
+            var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity
+                ?? throw new InvalidOperationException("No current activity available for ad loading.");
+            _nativeAd.Load(activity, _adCallback);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CsjAds] Splash LoadAsync start failed: {ex}");
+            tcs.TrySetException(ex);
+        }
 
         return tcs.Task;
     }
@@ -81,7 +144,15 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity
             ?? throw new InvalidOperationException("No current activity available.");
 
-        _nativeAd.Show(activity);
+        try
+        {
+            _nativeAd.Show(activity);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CsjAds] Native splash Show failed: {ex}");
+            throw;
+        }
     }
 
     public void Dispose()
@@ -120,11 +191,65 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
             _onClosed = onClosed;
         }
 
-        public void OnAdLoaded() => _onLoaded();
-        public void OnAdFailed(int code, string? message) => _onFailed(code, message);
-        public void OnAdShow() => _onShown();
-        public void OnAdClicked() => _onClicked();
-        public void OnAdClosed() => _onClosed();
+        public void OnAdLoaded()
+        {
+            try
+            {
+                _onLoaded();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] JNI OnAdLoaded: {ex}");
+            }
+        }
+
+        public void OnAdFailed(int code, string? message)
+        {
+            try
+            {
+                _onFailed(code, message);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] JNI OnAdFailed: {ex}");
+            }
+        }
+
+        public void OnAdShow()
+        {
+            try
+            {
+                _onShown();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] JNI OnAdShow: {ex}");
+            }
+        }
+
+        public void OnAdClicked()
+        {
+            try
+            {
+                _onClicked();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] JNI OnAdClicked: {ex}");
+            }
+        }
+
+        public void OnAdClosed()
+        {
+            try
+            {
+                _onClosed();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] JNI OnAdClosed: {ex}");
+            }
+        }
         public void OnRewardVerified(string? rewardName, int rewardAmount, bool verified) { }
     }
 }

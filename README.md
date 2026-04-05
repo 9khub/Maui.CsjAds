@@ -86,7 +86,7 @@ This library uses the **Native Library Interop** approach:
 │  └── ICsjAdService (DI)                          │
 │      └── CsjBannerView (XAML)                    │
 ├──────────────────────────────────────────────────┤
-│  CsjAds (net8.0 + net8.0-android + net8.0-ios)  │
+│  CsjAds (net10.0 + net10.0-android + net10.0-ios)  │
 │  ├── Abstractions/ (shared interfaces)           │
 │  ├── Platforms/Android/ (Android impl)           │
 │  └── Platforms/iOS/ (iOS impl)                   │
@@ -105,7 +105,7 @@ Instead of binding the entire CSJ SDK (which has hundreds of classes and heavy o
 
 ### Prerequisites
 
-- .NET 8.0 SDK
+- .NET 10.0 SDK
 - Android SDK (API 34)
 - Xcode 15+ (for iOS, macOS only)
 - JDK 11+ (for Android native wrapper)
@@ -113,8 +113,8 @@ Instead of binding the entire CSJ SDK (which has hundreds of classes and heavy o
 ### Build
 
 ```bash
-# Build the .NET library (net8.0 target only — shared abstractions)
-dotnet build src/CsjAds/CsjAds.csproj -p:TargetFramework=net8.0
+# Build the .NET library (net10.0 target only — shared abstractions)
+dotnet build src/CsjAds/CsjAds.csproj -p:TargetFramework=net10.0
 
 # Build the Android native wrapper (requires Android SDK + Gradle)
 cd native/android && ./gradlew :csjadswrapper:assembleRelease
@@ -123,7 +123,7 @@ cd native/android && ./gradlew :csjadswrapper:assembleRelease
 cd native/ios/CsjAdsWrapper && pod install && xcodebuild -workspace CsjAdsWrapper.xcworkspace -scheme CsjAdsWrapper -sdk iphoneos
 
 # Build everything for Android
-dotnet build src/CsjAds/CsjAds.csproj -f net8.0-android
+dotnet build src/CsjAds/CsjAds.csproj -f net10.0-android
 
 # Pack NuGet
 dotnet pack src/CsjAds/CsjAds.csproj -c Release

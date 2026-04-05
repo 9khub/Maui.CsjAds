@@ -71,7 +71,15 @@ internal sealed class CsjRewardedVideoAdImpl : ICsjRewardedVideoAd
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity
             ?? throw new InvalidOperationException("No current activity available.");
 
-        _nativeAd.Show(activity);
+        try
+        {
+            _nativeAd.Show(activity);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CsjAds] Rewarded Show: {ex}");
+            throw;
+        }
     }
 
     public void Dispose()

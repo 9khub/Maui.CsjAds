@@ -1,4 +1,5 @@
 #if ANDROID
+using System.Diagnostics;
 using Android.Views;
 using CsjAds.Internal;
 using Microsoft.Maui.Handlers;
@@ -54,28 +55,50 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
 
     private void ReloadAd()
     {
-        if (PlatformView == null) return;
+        if (PlatformView == null || VirtualView == null) return;
+        if (VirtualView.Handler != null && !ReferenceEquals(VirtualView.Handler, this)) return;
 
         _nativeBannerAd?.Destroy();
+        _nativeBannerAd?.Dispose();
+        _nativeBannerAd = null;
         PlatformView.RemoveAllViews();
         LoadAd(PlatformView);
     }
 
     private void LoadAd(global::Android.Widget.FrameLayout container)
     {
-        if (VirtualView == null || string.IsNullOrEmpty(VirtualView.SlotId)) return;
+        if (VirtualView == null || string.IsNullOrEmpty(VirtualView.SlotId) || container == null)
+            return;
+
+        var ctx = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity ?? Context
+            ?? global::Android.App.Application.Context;
+        if (ctx == null)
+        {
+            Debug.WriteLine("[CsjAds] Banner LoadAd skipped: no Context");
+            return;
+        }
 
         var adSize = VirtualView.AdSize;
         var width = adSize.IsAdaptive ? 0 : adSize.Width;
         var height = adSize.IsAdaptive ? 0 : adSize.Height;
 
-        _nativeBannerAd = new Com.Csjads.Wrapper.CsjBannerAd(
-            VirtualView.SlotId, width, height);
+        try
+        {
+            _nativeBannerAd = new Com.Csjads.Wrapper.CsjBannerAd(
+                VirtualView.SlotId, width, height);
 
-        _bannerCallback = new BannerCallback(VirtualView);
-
-        var context = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity ?? Context;
-        _nativeBannerAd.Load(context, container, _bannerCallback);
+            _bannerCallback = new BannerCallback(VirtualView);
+            _nativeBannerAd.Load(ctx, container, _bannerCallback);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CsjAds] Banner LoadAd failed: {ex}");
+            _nativeBannerAd?.Dispose();
+            _nativeBannerAd = null;
+            _bannerCallback = null;
+            MainThreadDispatcher.Dispatch(() =>
+                VirtualView?.RaiseAdFailed(new AdError(-2000, ex.Message)));
+        }
     }
 
     private sealed class BannerCallback : Java.Lang.Object, Com.Csjads.Wrapper.ICsjAdCallback
@@ -85,16 +108,56 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
         public BannerCallback(CsjBannerView view) => _view = view;
 
         public void OnAdLoaded() =>
-            MainThreadDispatcher.Dispatch(() => _view.RaiseAdLoaded());
+            MainThreadDispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    _view.RaiseAdLoaded();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Banner OnAdLoaded: {ex}");
+                }
+            });
 
         public void OnAdFailed(int code, string? message) =>
-            MainThreadDispatcher.Dispatch(() => _view.RaiseAdFailed(new AdError(code, message ?? "Unknown")));
+            MainThreadDispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    _view.RaiseAdFailed(new AdError(code, message ?? "Unknown"));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Banner OnAdFailed: {ex}");
+                }
+            });
 
         public void OnAdClicked() =>
-            MainThreadDispatcher.Dispatch(() => _view.RaiseAdClicked());
+            MainThreadDispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    _view.RaiseAdClicked();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Banner OnAdClicked: {ex}");
+                }
+            });
 
         public void OnAdClosed() =>
-            MainThreadDispatcher.Dispatch(() => _view.RaiseAdClosed());
+            MainThreadDispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    _view.RaiseAdClosed();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CsjAds] Banner OnAdClosed: {ex}");
+                }
+            });
 
         public void OnAdShow() { }
         public void OnRewardVerified(string? rewardName, int rewardAmount, bool verified) { }

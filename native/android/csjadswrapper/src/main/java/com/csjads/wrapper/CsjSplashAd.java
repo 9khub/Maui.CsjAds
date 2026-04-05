@@ -83,6 +83,14 @@ public class CsjSplashAd {
 
             @Override
             public void onSplashRenderSuccess(CSJSplashAd ad) {
+                if (ad == null) {
+                    android.util.Log.e("CsjAdsWrapper",
+                            "Splash onSplashRenderSuccess: ad is null, slotId=" + slotId);
+                    if (callback != null) {
+                        callback.onAdFailed(-1, "Splash render success but ad instance is null");
+                    }
+                    return;
+                }
                 loadedAd = ad;
                 if (callback != null) callback.onAdLoaded();
             }

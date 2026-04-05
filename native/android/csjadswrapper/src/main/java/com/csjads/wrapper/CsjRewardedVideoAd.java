@@ -41,6 +41,13 @@ public class CsjRewardedVideoAd {
 
             @Override
             public void onRewardVideoAdLoad(TTRewardVideoAd ad) {
+                if (ad == null) {
+                    android.util.Log.e("CsjAdsWrapper", "Reward onRewardVideoAdLoad: ad is null, slotId=" + slotId);
+                    if (callback != null) {
+                        callback.onAdFailed(-1, "Reward video ad instance is null");
+                    }
+                    return;
+                }
                 loadedAd = ad;
                 if (callback != null) {
                     callback.onAdLoaded();
@@ -61,6 +68,12 @@ public class CsjRewardedVideoAd {
     }
 
     public void show(Activity activity) {
+        if (activity == null) {
+            if (callback != null) {
+                callback.onAdFailed(-1, "Activity is null");
+            }
+            return;
+        }
         if (loadedAd == null) {
             if (callback != null) {
                 callback.onAdFailed(-1, "Ad not loaded");
@@ -114,6 +127,15 @@ public class CsjRewardedVideoAd {
             }
         });
 
-        loadedAd.showRewardVideoAd(activity);
+        try {
+            loadedAd.showRewardVideoAd(activity);
+        } catch (Throwable t) {
+            android.util.Log.e("CsjAdsWrapper", "Reward show failed, slotId=" + slotId, t);
+            if (callback != null) {
+                String m = t.getMessage();
+                callback.onAdFailed(-3, m != null ? m : "showRewardVideoAd failed");
+            }
+            loadedAd = null;
+        }
     }
 }

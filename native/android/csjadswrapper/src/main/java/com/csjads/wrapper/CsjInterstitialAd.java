@@ -41,6 +41,13 @@ public class CsjInterstitialAd {
 
             @Override
             public void onFullScreenVideoAdLoad(TTFullScreenVideoAd ad) {
+                if (ad == null) {
+                    android.util.Log.e("CsjAdsWrapper", "Interstitial onFullScreenVideoAdLoad: ad is null, slotId=" + slotId);
+                    if (callback != null) {
+                        callback.onAdFailed(-1, "Full screen ad instance is null");
+                    }
+                    return;
+                }
                 loadedAd = ad;
                 if (callback != null) {
                     callback.onAdLoaded();
@@ -60,6 +67,12 @@ public class CsjInterstitialAd {
     }
 
     public void show(Activity activity) {
+        if (activity == null) {
+            if (callback != null) {
+                callback.onAdFailed(-1, "Activity is null");
+            }
+            return;
+        }
         if (loadedAd == null) {
             if (callback != null) {
                 callback.onAdFailed(-1, "Ad not loaded");
@@ -94,6 +107,15 @@ public class CsjInterstitialAd {
                     }
                 });
 
-        loadedAd.showFullScreenVideoAd(activity);
+        try {
+            loadedAd.showFullScreenVideoAd(activity);
+        } catch (Throwable t) {
+            android.util.Log.e("CsjAdsWrapper", "Interstitial show failed, slotId=" + slotId, t);
+            if (callback != null) {
+                String m = t.getMessage();
+                callback.onAdFailed(-3, m != null ? m : "showFullScreenVideoAd failed");
+            }
+            loadedAd = null;
+        }
     }
 }

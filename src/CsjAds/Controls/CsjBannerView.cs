@@ -49,9 +49,21 @@ public class CsjBannerView : View
     public event EventHandler<AdEventArgs>? OnAdClicked;
     public event EventHandler<AdEventArgs>? OnAdClosed;
 
-    // Internal methods for handlers to raise events
-    internal void RaiseAdLoaded() => OnAdLoaded?.Invoke(this, new AdEventArgs());
-    internal void RaiseAdFailed(AdError error) => OnAdFailed?.Invoke(this, new AdErrorEventArgs(error));
-    internal void RaiseAdClicked() => OnAdClicked?.Invoke(this, new AdEventArgs());
-    internal void RaiseAdClosed() => OnAdClosed?.Invoke(this, new AdEventArgs());
+    // Internal methods for handlers to raise events（订阅方异常不得冒泡至 JNI/原生回调线程）
+    internal void RaiseAdLoaded() => SafeRaise(() => OnAdLoaded?.Invoke(this, new AdEventArgs()));
+    internal void RaiseAdFailed(AdError error) => SafeRaise(() => OnAdFailed?.Invoke(this, new AdErrorEventArgs(error)));
+    internal void RaiseAdClicked() => SafeRaise(() => OnAdClicked?.Invoke(this, new AdEventArgs()));
+    internal void RaiseAdClosed() => SafeRaise(() => OnAdClosed?.Invoke(this, new AdEventArgs()));
+
+    private static void SafeRaise(Action invoke)
+    {
+        try
+        {
+            invoke();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CsjAds] CsjBannerView subscriber error: {ex}");
+        }
+    }
 }

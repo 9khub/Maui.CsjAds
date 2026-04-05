@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace CsjAds.Internal;
 
 /// <summary>
@@ -7,10 +9,22 @@ internal static class MainThreadDispatcher
 {
     public static void Dispatch(Action action)
     {
+        void RunSafe()
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CsjAds] MainThreadDispatcher callback error: {ex}");
+            }
+        }
+
         if (MainThread.IsMainThread)
-            action();
+            RunSafe();
         else
-            MainThread.BeginInvokeOnMainThread(action);
+            MainThread.BeginInvokeOnMainThread(RunSafe);
     }
 
     public static Task DispatchAsync(Func<Task> action)
@@ -24,11 +38,11 @@ internal static class MainThreadDispatcher
             try
             {
                 await action();
-                tcs.SetResult();
+                tcs.TrySetResult();
             }
             catch (Exception ex)
             {
-                tcs.SetException(ex);
+                tcs.TrySetException(ex);
             }
         });
         return tcs.Task;
