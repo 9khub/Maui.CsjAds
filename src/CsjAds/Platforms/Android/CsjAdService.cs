@@ -140,6 +140,12 @@ internal sealed class CsjAdService : ICsjAdService
         EnsureInitialized();
         return new CsjSplashAdImpl(slotId);
     }
+
+    public ICsjFeedAd CreateFeedAd(string slotId, int adCount = 3, int width = 0, int height = 0)
+    {
+        EnsureInitialized();
+        return new CsjFeedAdImpl(slotId, adCount, width, height);
+    }
     
     public void LaunchDebugTool(string url)
     {

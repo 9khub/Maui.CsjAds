@@ -159,6 +159,15 @@ internal sealed class CsjSplashAdImpl : ICsjSplashAd
     {
         if (_disposed) return;
         _disposed = true;
+        try
+        {
+            // Force-remove any leftover splash views from the content root
+            _nativeAd?.Destroy();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CsjAds] Splash Destroy: {ex.Message}");
+        }
         _nativeAd?.Dispose();
         _nativeAd = null;
         _adCallback = null;

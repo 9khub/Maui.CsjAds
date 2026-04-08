@@ -21,6 +21,9 @@ internal sealed class NullAdService : ICsjAdService
     public ICsjSplashAd CreateSplashAd(string slotId)
         => throw new PlatformNotSupportedException("CSJ ads are only supported on Android and iOS.");
 
+    public ICsjFeedAd CreateFeedAd(string slotId, int adCount = 3, int width = 0, int height = 0)
+        => throw new PlatformNotSupportedException("CSJ ads are only supported on Android and iOS.");
+
     public void LaunchDebugTool(string url)
     {
         // No-op for unsupported platforms

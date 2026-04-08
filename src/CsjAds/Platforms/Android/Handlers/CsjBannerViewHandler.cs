@@ -29,12 +29,25 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
     protected override global::Android.Widget.FrameLayout CreatePlatformView()
     {
         var container = new global::Android.Widget.FrameLayout(Context);
-        LoadAd(container);
+        // 不在此处加载广告 — 容器尚未加入 View 树，
+        // Express 渲染引擎(WebView) 需要 attached window 才能正常工作。
+        // 广告加载延迟到 OnAttachedToWindow 时触发。
+        container.ViewAttachedToWindow += OnContainerAttached;
         return container;
+    }
+
+    private void OnContainerAttached(object? sender, global::Android.Views.View.ViewAttachedToWindowEventArgs e)
+    {
+        if (sender is global::Android.Widget.FrameLayout container)
+        {
+            container.ViewAttachedToWindow -= OnContainerAttached;
+            LoadAd(container);
+        }
     }
 
     protected override void DisconnectHandler(global::Android.Widget.FrameLayout platformView)
     {
+        platformView.ViewAttachedToWindow -= OnContainerAttached;
         _nativeBannerAd?.Destroy();
         _nativeBannerAd?.Dispose();
         _nativeBannerAd = null;

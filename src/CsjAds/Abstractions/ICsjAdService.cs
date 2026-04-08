@@ -41,6 +41,11 @@ public interface ICsjAdService
     ICsjSplashAd CreateSplashAd(string slotId);
 
     /// <summary>
+    /// Create a feed (native express) ad batch loader for the given slot.
+    /// </summary>
+    ICsjFeedAd CreateFeedAd(string slotId, int adCount = 3, int width = 0, int height = 0);
+
+    /// <summary>
     /// Launch the CSJ Debug Tool (可视化测试工具).
     /// </summary>
     /// <param name="url">The URL obtained from the CSJ portal (usually via QR code).</param>

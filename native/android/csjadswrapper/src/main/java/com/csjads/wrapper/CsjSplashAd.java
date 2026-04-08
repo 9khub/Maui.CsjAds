@@ -26,6 +26,10 @@ public class CsjSplashAd {
     private CsjAdCallback callback;
     /** 最近一次 show 的 Activity，用于将 SDK 回调派发到 UI 线程 */
     private Activity hostActivity;
+    /** show 前 content root 的子 View 数量，close 后据此清理 SDK 添加的残留 View */
+    private int preShowChildCount = -1;
+    /** 防止 onSplashAdClose 被重复触发 */
+    private volatile boolean splashClosed;
 
     /**
      * @param slotId    Ad slot ID from CSJ platform
@@ -108,6 +112,26 @@ public class CsjSplashAd {
         }, timeoutMs);
     }
 
+    /**
+     * 移除 showSplashView 添加到 content root 的残留子 View。
+     * SDK 部分机型/版本不会自动移除，导致透明 View 拦截所有触摸事件。
+     */
+    private void removeSplashViews(ViewGroup contentRoot) {
+        try {
+            if (preShowChildCount < 0) return;
+            while (contentRoot.getChildCount() > preShowChildCount) {
+                int idx = contentRoot.getChildCount() - 1;
+                View child = contentRoot.getChildAt(idx);
+                android.util.Log.d("CsjAdsWrapper",
+                        "Removing leftover splash view at index " + idx + ": " + child);
+                contentRoot.removeViewAt(idx);
+            }
+            preShowChildCount = -1;
+        } catch (Throwable t) {
+            android.util.Log.e("CsjAdsWrapper", "removeSplashViews error", t);
+        }
+    }
+
     private boolean canUseActivity(Activity a) {
         if (a == null) return false;
         if (a.isFinishing()) return false;
@@ -133,6 +157,32 @@ public class CsjSplashAd {
             } catch (Throwable t) {
                 android.util.Log.e("CsjAdsWrapper", "Splash listener callback error (no activity)", t);
             }
+        }
+    }
+
+    /**
+     * 强制销毁：清理残留 View 并断开所有回调。
+     * 用于超时或 Dispose 时确保原生 View 不再拦截触摸。
+     */
+    public void destroy() {
+        splashClosed = true;
+        if (loadedAd != null) {
+            try { loadedAd.setSplashAdListener(null); } catch (Throwable ignored) {}
+            loadedAd = null;
+        }
+        callback = null;
+        final Activity a = hostActivity;
+        if (a != null && canUseActivity(a)) {
+            a.runOnUiThread(() -> {
+                try {
+                    android.view.View root = a.getWindow().getDecorView().findViewById(android.R.id.content);
+                    if (root instanceof ViewGroup) {
+                        removeSplashViews((ViewGroup) root);
+                    }
+                } catch (Throwable t) {
+                    android.util.Log.e("CsjAdsWrapper", "destroy removeSplashViews error", t);
+                }
+            });
         }
     }
 
@@ -170,6 +220,20 @@ public class CsjSplashAd {
                     return;
                 }
 
+                View root = activity.getWindow().getDecorView().findViewById(android.R.id.content);
+                if (!(root instanceof ViewGroup)) {
+                    android.util.Log.e("CsjAdsWrapper", "Splash show: content root is not ViewGroup");
+                    if (callback != null) {
+                        callback.onAdFailed(-2, "Content root is not ViewGroup");
+                    }
+                    loadedAd = null;
+                    return;
+                }
+
+                final ViewGroup contentRoot = (ViewGroup) root;
+                splashClosed = false;
+                preShowChildCount = contentRoot.getChildCount();
+
                 adRef.setSplashAdListener(new CSJSplashAd.SplashAdListener() {
                     @Override
                     public void onSplashAdShow(CSJSplashAd ad) {
@@ -191,10 +255,17 @@ public class CsjSplashAd {
 
                     @Override
                     public void onSplashAdClose(CSJSplashAd ad, int closeType) {
+                        if (splashClosed) return;
+                        splashClosed = true;
                         android.util.Log.d("CsjAdsWrapper",
                                 "onSplashAdClose slotId=" + slotId + " closeType=" + closeType);
+                        // Prevent further callbacks from the SDK
+                        if (ad != null) {
+                            try { ad.setSplashAdListener(null); } catch (Throwable ignored) {}
+                        }
                         dispatchSplashCallback(() -> {
                             try {
+                                removeSplashViews(contentRoot);
                                 if (callback != null) {
                                     callback.onAdClosed();
                                 }
@@ -205,17 +276,7 @@ public class CsjSplashAd {
                     }
                 });
 
-                View root = activity.getWindow().getDecorView().findViewById(android.R.id.content);
-                if (!(root instanceof ViewGroup)) {
-                    android.util.Log.e("CsjAdsWrapper", "Splash show: content root is not ViewGroup");
-                    if (callback != null) {
-                        callback.onAdFailed(-2, "Content root is not ViewGroup");
-                    }
-                    loadedAd = null;
-                    return;
-                }
-
-                adRef.showSplashView((ViewGroup) root);
+                adRef.showSplashView(contentRoot);
             } catch (Throwable t) {
                 android.util.Log.e("CsjAdsWrapper", "Splash show failed", t);
                 if (callback != null) {
