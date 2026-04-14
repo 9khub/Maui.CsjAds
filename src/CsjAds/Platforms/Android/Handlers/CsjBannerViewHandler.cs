@@ -26,28 +26,48 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
     {
     }
 
+    private bool _adLoaded;
+
     protected override global::Android.Widget.FrameLayout CreatePlatformView()
     {
         var container = new global::Android.Widget.FrameLayout(Context);
-        // 不在此处加载广告 — 容器尚未加入 View 树，
-        // Express 渲染引擎(WebView) 需要 attached window 才能正常工作。
-        // 广告加载延迟到 OnAttachedToWindow 时触发。
+        // 广告加载延迟到容器 attach 到 window + 有实际尺寸后触发
         container.ViewAttachedToWindow += OnContainerAttached;
+        container.LayoutChange += OnContainerLayoutChange;
         return container;
     }
 
     private void OnContainerAttached(object? sender, global::Android.Views.View.ViewAttachedToWindowEventArgs e)
     {
         if (sender is global::Android.Widget.FrameLayout container)
+            TryLoadAd(container);
+    }
+
+    private void OnContainerLayoutChange(object? sender, global::Android.Views.View.LayoutChangeEventArgs e)
+    {
+        if (!_adLoaded && sender is global::Android.Widget.FrameLayout fl && fl.Width > 0 && fl.Height > 0)
+            TryLoadAd(fl);
+    }
+
+    private void TryLoadAd(global::Android.Widget.FrameLayout container)
+    {
+        if (_adLoaded) return;
+        if (!container.IsAttachedToWindow) return;
+        if (container.Width <= 0 || container.Height <= 0)
         {
-            container.ViewAttachedToWindow -= OnContainerAttached;
-            LoadAd(container);
+            Console.WriteLine($"[CsjAds] Banner container size {container.Width}x{container.Height}, waiting for layout");
+            return;
         }
+        _adLoaded = true;
+        Console.WriteLine($"[CsjAds] Banner loading ad, container size={container.Width}x{container.Height}");
+        LoadAd(container);
     }
 
     protected override void DisconnectHandler(global::Android.Widget.FrameLayout platformView)
     {
         platformView.ViewAttachedToWindow -= OnContainerAttached;
+        platformView.LayoutChange -= OnContainerLayoutChange;
+        _adLoaded = false;
         _nativeBannerAd?.Destroy();
         _nativeBannerAd?.Dispose();
         _nativeBannerAd = null;
@@ -74,8 +94,9 @@ internal sealed class CsjBannerViewHandler : ViewHandler<CsjBannerView, global::
         _nativeBannerAd?.Destroy();
         _nativeBannerAd?.Dispose();
         _nativeBannerAd = null;
+        _adLoaded = false;
         PlatformView.RemoveAllViews();
-        LoadAd(PlatformView);
+        TryLoadAd(PlatformView);
     }
 
     private void LoadAd(global::Android.Widget.FrameLayout container)

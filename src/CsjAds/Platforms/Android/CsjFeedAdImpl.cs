@@ -69,20 +69,65 @@ internal sealed class CsjFeedAdImpl : ICsjFeedAd
         return tcs.Task;
     }
 
-    /// <summary>Get a rendered native View by index (0-based).</summary>
-    public object? GetRenderedView(int index) => _nativeAd?.GetRenderedView(index);
+    public object? GetRenderedView(int index)
+    {
+        try { return _nativeAd?.GetRenderedView(index); }
+        catch { return null; }
+    }
 
-    /// <summary>Whether the ads were loaded in self-render mode (image/title data instead of native Views).</summary>
-    public bool IsSelfRenderMode => _nativeAd?.IsSelfRenderMode ?? false;
+    public bool IsSelfRenderMode
+    {
+        get
+        {
+            try { return _nativeAd?.IsSelfRenderMode ?? false; }
+            catch { return false; }
+        }
+    }
 
-    /// <summary>Get ad title for self-render mode.</summary>
-    public string? GetAdTitle(int index) => _nativeAd?.GetAdTitle(index);
+    public string? GetAdTitle(int index)
+    {
+        try { return _nativeAd?.GetAdTitle(index); }
+        catch { return null; }
+    }
 
-    /// <summary>Get ad image URL for self-render mode.</summary>
-    public string? GetAdImageUrl(int index) => _nativeAd?.GetAdImageUrl(index);
+    public string? GetAdImageUrl(int index)
+    {
+        try { return _nativeAd?.GetAdImageUrl(index); }
+        catch { return null; }
+    }
 
-    /// <summary>Get ad source label for self-render mode.</summary>
-    public string? GetAdSource(int index) => _nativeAd?.GetAdSource(index);
+    /// <summary>
+    /// 将第 index 条广告渲染到已 attach 到 window 的容器中。
+    /// 必须在主线程调用。
+    /// </summary>
+    public void RenderIntoContainer(int index, global::Android.Views.ViewGroup container, Action onSuccess, Action<string> onFailed)
+    {
+        Console.WriteLine($"[CsjAds] FeedAdImpl.RenderIntoContainer: index={index}, nativeAd={_nativeAd != null}, container.attached={container?.IsAttachedToWindow}, container.size={container?.Width}x{container?.Height}");
+        if (_nativeAd == null) { onFailed("nativeAd is null"); return; }
+        try
+        {
+            var cb = new RenderCallback(onSuccess, onFailed);
+            _nativeAd.RenderIntoContainer(index, container, cb);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CsjAds] FeedAdImpl.RenderIntoContainer EXCEPTION: {ex.Message}");
+            onFailed(ex.Message);
+        }
+    }
+
+    private sealed class RenderCallback : Java.Lang.Object, Com.Csjads.Wrapper.ICsjAdCallback
+    {
+        private readonly Action _onSuccess;
+        private readonly Action<string> _onFailed;
+        public RenderCallback(Action onSuccess, Action<string> onFailed) { _onSuccess = onSuccess; _onFailed = onFailed; }
+        public void OnAdLoaded() => MainThreadDispatcher.Dispatch(() => _onSuccess());
+        public void OnAdFailed(int code, string? msg) => MainThreadDispatcher.Dispatch(() => _onFailed(msg ?? $"code={code}"));
+        public void OnAdShow() { }
+        public void OnAdClicked() { }
+        public void OnAdClosed() { }
+        public void OnRewardVerified(string? n, int a, bool v) { }
+    }
 
     public void Destroy()
     {

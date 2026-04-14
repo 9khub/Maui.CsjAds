@@ -9,14 +9,21 @@ public class CsjFeedAdView : View
     public static readonly BindableProperty NativeAdReferenceProperty =
         BindableProperty.Create(nameof(NativeAdReference), typeof(object), typeof(CsjFeedAdView), null);
 
-    /// <summary>
-    /// The pre-rendered native ad view (Android.Views.View on Android).
-    /// Set by the service layer after batch loading.
-    /// </summary>
+    public static readonly BindableProperty AdIndexProperty =
+        BindableProperty.Create(nameof(AdIndex), typeof(int), typeof(CsjFeedAdView), -1);
+
+    /// <summary>Reference to the ICsjFeedAd batch object.</summary>
     public object? NativeAdReference
     {
         get => GetValue(NativeAdReferenceProperty);
         set => SetValue(NativeAdReferenceProperty, value);
+    }
+
+    /// <summary>Index of the ad within the batch to render.</summary>
+    public int AdIndex
+    {
+        get => (int)GetValue(AdIndexProperty);
+        set => SetValue(AdIndexProperty, value);
     }
 
     public event EventHandler<AdEventArgs>? OnAdLoaded;
