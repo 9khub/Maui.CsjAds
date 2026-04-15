@@ -74,9 +74,33 @@ public class CsjFeedAd {
                         ((ViewGroup) view.getParent()).removeView(view);
                     }
                     container.removeAllViews();
-                    container.addView(view);
+
+                    // 强制用 MATCH_PARENT × MATCH_PARENT — 确保广告 View 占满整个容器
+                    android.widget.FrameLayout.LayoutParams lp =
+                            new android.widget.FrameLayout.LayoutParams(
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT);
+                    container.addView(view, lp);
+
+                    // 立即记录广告 View 的实际状态（同步，不等 post）
                     android.util.Log.d("CsjAdsWrapper",
-                            "Feed render[" + index + "]: success, size=" + w + "x" + h);
+                            "Feed render[" + index + "] addView done: sdk_size=" + w + "x" + h
+                            + ", view.class=" + view.getClass().getSimpleName()
+                            + ", view.visibility=" + view.getVisibility()
+                            + ", view.alpha=" + view.getAlpha()
+                            + ", container.childCount=" + container.getChildCount());
+
+                    // 延迟 500ms 后再次记录（等 WebView 有机会渲染内容）
+                    final View finalView = view;
+                    container.postDelayed(() -> {
+                        android.util.Log.d("CsjAdsWrapper",
+                                "Feed render[" + index + "] +500ms: view.actual="
+                                + finalView.getWidth() + "x" + finalView.getHeight()
+                                + ", container.size=" + container.getWidth() + "x" + container.getHeight()
+                                + ", view.isShown=" + finalView.isShown()
+                                + (finalView instanceof ViewGroup ? ", subChildCount=" + ((ViewGroup)finalView).getChildCount() : ""));
+                    }, 500);
+
                     if (renderCallback != null) renderCallback.onAdLoaded();
                 } catch (Exception e) {
                     android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "] addView: " + e.getMessage());
@@ -85,12 +109,17 @@ public class CsjFeedAd {
             }
         });
 
-        try {
-            ad.render();
-        } catch (Throwable t) {
-            android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "] threw: " + t.getMessage());
-            if (renderCallback != null) renderCallback.onAdFailed(-1005, t.getMessage());
-        }
+        // 错峰 render：不同 index 延迟不同时间，避免多个 WebView 同时实例化
+        // 导致内存峰值（穿山甲 Express 在部分设备上并发会 native 崩溃）
+        long delayMs = index * 400L;
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                ad.render();
+            } catch (Throwable t) {
+                android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "] threw: " + t.getMessage());
+                if (renderCallback != null) renderCallback.onAdFailed(-1005, t.getMessage());
+            }
+        }, delayMs);
     }
 
     /** 不再使用 — 保留接口兼容。渲染改为 renderIntoContainer。 */
