@@ -12,11 +12,13 @@ import com.bytedance.sdk.openadsdk.mediation.ad.MediationAdSlot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Feed (信息流) 广告。使用 Express 模板渲染。
- * 广告数据先加载并缓存，render 延迟到容器 attach 到 window 后执行。
- * （与 Banner 的 ViewAttachedToWindow 修复策略一致）
+ * Feed (信息流) 广告。
+ * 策略：load 阶段就完成 render，只保留渲染成功的 View。
+ * C# 层通过 getRenderedCount/getRenderedView 知道有多少广告可插入。
+ * 渲染失败的广告不会被插入到 feed，避免显示空占位。
  */
 public class CsjFeedAd {
 
@@ -25,109 +27,30 @@ public class CsjFeedAd {
     private final int height;
     private final int adCount;
 
-    /** 已加载但尚未 render 的 Express 广告对象 */
     private List<TTNativeExpressAd> loadedAds;
+    private final List<View> renderedViews = new ArrayList<>();
     private CsjAdCallback callback;
+    private boolean loadCompleted = false;
 
     public CsjFeedAd(String slotId, int adCount, int width, int height) {
         this.slotId = slotId;
-        this.adCount = adCount > 0 ? adCount : 3;
+        this.adCount = adCount > 0 ? adCount : 1;
         this.width = width;
         this.height = height;
     }
 
-    /** 已加载的广告数量（尚未 render） */
+    /** 已成功渲染的广告数量 */
     public int getRenderedCount() {
-        return loadedAds != null ? loadedAds.size() : 0;
+        return renderedViews.size();
     }
 
-    /**
-     * 将第 index 条广告渲染到指定容器中。
-     * 必须在主线程、容器已 attach 到 window 后调用。
-     */
-    public void renderIntoContainer(int index, ViewGroup container, CsjAdCallback renderCallback) {
-        if (loadedAds == null || index < 0 || index >= loadedAds.size()) {
-            if (renderCallback != null) renderCallback.onAdFailed(-1, "Invalid ad index");
-            return;
-        }
-
-        TTNativeExpressAd ad = loadedAds.get(index);
-        ad.setExpressInteractionListener(new TTNativeExpressAd.ExpressAdInteractionListener() {
-            @Override public void onAdClicked(View v, int t) { if (callback != null) callback.onAdClicked(); }
-            @Override public void onAdShow(View v, int t) {}
-            @Override public void onRenderFail(View v, String msg, int code) {
-                android.util.Log.e("CsjAdsWrapper", "Feed render fail[" + index + "]: code=" + code + ", msg=" + msg);
-                if (renderCallback != null) renderCallback.onAdFailed(code, msg);
-            }
-            @Override
-            public void onRenderSuccess(View view, float w, float h) {
-                if (view == null) {
-                    try { view = ad.getExpressAdView(); } catch (Throwable ignored) {}
-                }
-                if (view == null) {
-                    android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "]: null view");
-                    if (renderCallback != null) renderCallback.onAdFailed(-1001, "Express render null view");
-                    return;
-                }
-                try {
-                    if (view.getParent() instanceof ViewGroup) {
-                        ((ViewGroup) view.getParent()).removeView(view);
-                    }
-                    container.removeAllViews();
-
-                    // 强制用 MATCH_PARENT × MATCH_PARENT — 确保广告 View 占满整个容器
-                    android.widget.FrameLayout.LayoutParams lp =
-                            new android.widget.FrameLayout.LayoutParams(
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT);
-                    container.addView(view, lp);
-
-                    // 立即记录广告 View 的实际状态（同步，不等 post）
-                    android.util.Log.d("CsjAdsWrapper",
-                            "Feed render[" + index + "] addView done: sdk_size=" + w + "x" + h
-                            + ", view.class=" + view.getClass().getSimpleName()
-                            + ", view.visibility=" + view.getVisibility()
-                            + ", view.alpha=" + view.getAlpha()
-                            + ", container.childCount=" + container.getChildCount());
-
-                    // 延迟 500ms 后再次记录（等 WebView 有机会渲染内容）
-                    final View finalView = view;
-                    container.postDelayed(() -> {
-                        android.util.Log.d("CsjAdsWrapper",
-                                "Feed render[" + index + "] +500ms: view.actual="
-                                + finalView.getWidth() + "x" + finalView.getHeight()
-                                + ", container.size=" + container.getWidth() + "x" + container.getHeight()
-                                + ", view.isShown=" + finalView.isShown()
-                                + (finalView instanceof ViewGroup ? ", subChildCount=" + ((ViewGroup)finalView).getChildCount() : ""));
-                    }, 500);
-
-                    if (renderCallback != null) renderCallback.onAdLoaded();
-                } catch (Exception e) {
-                    android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "] addView: " + e.getMessage());
-                    if (renderCallback != null) renderCallback.onAdFailed(-1003, e.getMessage());
-                }
-            }
-        });
-
-        // 错峰 render：不同 index 延迟不同时间，避免多个 WebView 同时实例化
-        // 导致内存峰值（穿山甲 Express 在部分设备上并发会 native 崩溃）
-        long delayMs = index * 400L;
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            try {
-                ad.render();
-            } catch (Throwable t) {
-                android.util.Log.e("CsjAdsWrapper", "Feed render[" + index + "] threw: " + t.getMessage());
-                if (renderCallback != null) renderCallback.onAdFailed(-1005, t.getMessage());
-            }
-        }, delayMs);
+    /** 获取已渲染的 View，供 C# Handler 添加到容器 */
+    public View getRenderedView(int index) {
+        if (index < 0 || index >= renderedViews.size()) return null;
+        return renderedViews.get(index);
     }
 
-    /** 不再使用 — 保留接口兼容。渲染改为 renderIntoContainer。 */
-    public View getRenderedView(int index) { return null; }
-    public boolean isSelfRenderMode() { return false; }
-    public String getAdTitle(int index) { return null; }
-    public String getAdImageUrl(int index) { return null; }
-    public String getAdSource(int index) { return null; }
+    public boolean isLoadCompleted() { return loadCompleted; }
 
     public void load(Context context, final CsjAdCallback callback) {
         this.callback = callback;
@@ -139,7 +62,7 @@ public class CsjFeedAd {
         int imageHeightPx = finalHeight > 0 ? (int) (finalHeight * dm.density) : 0;
 
         android.util.Log.d("CsjAdsWrapper",
-                "Feed: loading express, slotId=" + slotId + ", count=" + adCount);
+                "Feed: load+render flow starts, slotId=" + slotId + ", count=" + adCount);
 
         AdSlot.Builder slotBuilder = new AdSlot.Builder()
                 .setCodeId(slotId)
@@ -156,22 +79,109 @@ public class CsjFeedAd {
         adNative.loadNativeExpressAd(slotBuilder.build(), new TTAdNative.NativeExpressAdListener() {
             @Override
             public void onError(int code, String message) {
-                android.util.Log.e("CsjAdsWrapper", "Feed load failed: code=" + code + ", msg=" + message);
+                android.util.Log.e("CsjAdsWrapper",
+                        "Feed load failed: code=" + code + ", msg=" + message);
+                loadCompleted = true;
                 if (callback != null) callback.onAdFailed(code, message);
             }
 
             @Override
             public void onNativeExpressAdLoad(List<TTNativeExpressAd> ads) {
                 if (ads == null || ads.isEmpty()) {
+                    loadCompleted = true;
                     if (callback != null) callback.onAdFailed(-1, "No feed ads returned");
                     return;
                 }
                 loadedAds = ads;
-                android.util.Log.d("CsjAdsWrapper", "Feed: loaded " + ads.size() + " ads (render deferred)");
-                if (callback != null) callback.onAdLoaded();
+                final int total = ads.size();
+                final AtomicInteger pendingRenders = new AtomicInteger(total);
+
+                android.util.Log.d("CsjAdsWrapper",
+                        "Feed: loaded " + total + " ads, pre-rendering all");
+
+                for (int i = 0; i < total; i++) {
+                    final int adIndex = i;
+                    final TTNativeExpressAd ad = ads.get(i);
+                    ad.setExpressInteractionListener(new TTNativeExpressAd.ExpressAdInteractionListener() {
+                        @Override public void onAdClicked(View v, int t) { if (callback != null) callback.onAdClicked(); }
+                        @Override public void onAdShow(View v, int t) {}
+                        @Override public void onRenderFail(View v, String msg, int code) {
+                            android.util.Log.e("CsjAdsWrapper",
+                                    "Feed render fail idx=" + adIndex + " code=" + code + " msg=" + msg);
+                            if (pendingRenders.decrementAndGet() == 0) finalizeLoad();
+                        }
+                        @Override public void onRenderSuccess(View view, float w, float h) {
+                            if (view == null) {
+                                try { view = ad.getExpressAdView(); } catch (Throwable ignored) {}
+                            }
+                            if (view != null) {
+                                synchronized (renderedViews) { renderedViews.add(view); }
+                                android.util.Log.d("CsjAdsWrapper",
+                                        "Feed render success idx=" + adIndex + ", size=" + w + "x" + h
+                                                + ", total=" + renderedViews.size());
+                            } else {
+                                android.util.Log.e("CsjAdsWrapper",
+                                        "Feed render idx=" + adIndex + ": null view after fallback");
+                            }
+                            if (pendingRenders.decrementAndGet() == 0) finalizeLoad();
+                        }
+                    });
+
+                    // 错峰渲染：index × 300ms 延迟，避免多个 WebView 同时实例化导致 native 崩溃
+                    long delayMs = adIndex * 300L;
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        try { ad.render(); }
+                        catch (Throwable t) {
+                            android.util.Log.e("CsjAdsWrapper", "Feed render threw idx=" + adIndex, t);
+                            if (pendingRenders.decrementAndGet() == 0) finalizeLoad();
+                        }
+                    }, delayMs);
+                }
             }
         });
     }
+
+    private void finalizeLoad() {
+        loadCompleted = true;
+        int count = renderedViews.size();
+        android.util.Log.d("CsjAdsWrapper", "Feed all renders done: " + count + " succeeded");
+        if (callback != null) {
+            if (count > 0) callback.onAdLoaded();
+            else callback.onAdFailed(-1001, "All feed ads failed to render");
+        }
+    }
+
+    /** 不再使用 — 保留兼容性。渲染已在 load 阶段完成。 */
+    public void renderIntoContainer(int index, ViewGroup container, CsjAdCallback renderCallback) {
+        if (index < 0 || index >= renderedViews.size()) {
+            if (renderCallback != null) renderCallback.onAdFailed(-1, "Invalid ad index");
+            return;
+        }
+        View view = renderedViews.get(index);
+        if (view == null) {
+            if (renderCallback != null) renderCallback.onAdFailed(-1, "No rendered view");
+            return;
+        }
+        try {
+            if (view.getParent() instanceof ViewGroup) {
+                ((ViewGroup) view.getParent()).removeView(view);
+            }
+            container.removeAllViews();
+            android.widget.FrameLayout.LayoutParams lp =
+                    new android.widget.FrameLayout.LayoutParams(
+                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.FrameLayout.LayoutParams.MATCH_PARENT);
+            container.addView(view, lp);
+            if (renderCallback != null) renderCallback.onAdLoaded();
+        } catch (Exception e) {
+            if (renderCallback != null) renderCallback.onAdFailed(-1003, e.getMessage());
+        }
+    }
+
+    public boolean isSelfRenderMode() { return false; }
+    public String getAdTitle(int index) { return null; }
+    public String getAdImageUrl(int index) { return null; }
+    public String getAdSource(int index) { return null; }
 
     public void destroy() {
         if (loadedAds != null) {
@@ -180,5 +190,6 @@ public class CsjFeedAd {
             }
             loadedAds = null;
         }
+        renderedViews.clear();
     }
 }

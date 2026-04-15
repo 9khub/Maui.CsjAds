@@ -10,6 +10,8 @@ namespace CsjAds.Platforms.Android.Handlers;
 internal sealed class CsjFeedAdViewHandler : ViewHandler<CsjFeedAdView, global::Android.Widget.FrameLayout>
 {
     private bool _rendered;
+    private object? _lastRenderedRef;
+    private int _lastRenderedIndex = -1;
 
     public static readonly IPropertyMapper<CsjFeedAdView, CsjFeedAdViewHandler> Mapper =
         new PropertyMapper<CsjFeedAdView, CsjFeedAdViewHandler>(ViewMapper)
@@ -56,12 +58,23 @@ internal sealed class CsjFeedAdViewHandler : ViewHandler<CsjFeedAdView, global::
     private static void MapNativeAdReference(CsjFeedAdViewHandler handler, CsjFeedAdView view)
     {
         Console.WriteLine($"[CsjAds] FeedAdView.MapNativeAdRef: type={view.NativeAdReference?.GetType().Name}, adIndex={view.AdIndex}");
+        // NativeAdReference 引用变化（新 batch）→ 重置 rendered 状态，允许对新 batch 重新渲染
+        if (!ReferenceEquals(handler._lastRenderedRef, view.NativeAdReference))
+        {
+            handler._rendered = false;
+            handler.PlatformView?.RemoveAllViews();
+        }
         handler.TryRender();
     }
 
     private static void MapAdIndex(CsjFeedAdViewHandler handler, CsjFeedAdView view)
     {
         Console.WriteLine($"[CsjAds] FeedAdView.MapAdIndex: adIndex={view.AdIndex}, hasRef={view.NativeAdReference != null}");
+        // AdIndex 变化也要重置（同一 batch 内不同 index）
+        if (handler._lastRenderedIndex != view.AdIndex)
+        {
+            handler._rendered = false;
+        }
         handler.TryRender();
     }
 
@@ -113,6 +126,8 @@ internal sealed class CsjFeedAdViewHandler : ViewHandler<CsjFeedAdView, global::
         }
 
         _rendered = true;
+        _lastRenderedRef = VirtualView.NativeAdReference;
+        _lastRenderedIndex = VirtualView.AdIndex;
         var index = VirtualView.AdIndex;
         Console.WriteLine($"[CsjAds] FeedAdView.TryRender: rendering index={index}");
 
